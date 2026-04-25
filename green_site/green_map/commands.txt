@@ -1,0 +1,14 @@
+cd "/mnt/c/Users/emanu/Desktop/Nuova cartella"
+python3 -m http.server 8000
+explorer.exe http://localhost:8000
+
+source venv/bin/activate
+
+
+cd "/mnt/c/Users/emanu/Desktop/Nuova cartella"
+source venv/bin/activate
+python3 -m backend.app
+
+Running on http://127.0.0.1:5000
+
+ curl -s "http://127.0.0.1:5000/route?slat=43.29886&slon=5.38964&elat=43.29820&elon=5.34129" | head -n 25
