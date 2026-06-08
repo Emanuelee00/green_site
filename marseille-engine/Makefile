@@ -23,7 +23,18 @@ start:          ## Start API + web frontend (Ctrl+C stops both)
 	@kill $$(lsof -ti:8000) 2>/dev/null; true
 	@trap 'kill 0' INT; \
 	UV_PYTHON=/usr/bin/python3 uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload & \
-	sleep 2 && cd $(FRONTEND_DIR) && node node_modules/vite/bin/vite.js & \
+	until curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done && \
+	cd $(FRONTEND_DIR) && node node_modules/vite/bin/vite.js & \
+	wait
+
+start-dashboard: ## Start API + admin dashboard (Ctrl+C stops both)
+	@kill $$(lsof -ti:8000) 2>/dev/null; true
+	@trap 'kill 0' INT; \
+	UV_PYTHON=/usr/bin/python3 uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload & \
+	echo "⏳ Waiting for engine to boot (loading raster + OSM graph)..." && \
+	until curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 2; done && \
+	echo "✅ Engine ready — starting dashboard..." && \
+	cd ../marseille-dashboard && node node_modules/vite/bin/vite.js --port 5174 & \
 	wait
 
 start-mobile:   ## Start API + mobile app preview (Ctrl+C stops both)

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from core.data_loader import DataLoader
-from api.routers import uhi, history, route, risk
+from api.routers import uhi, history, route, risk, raster, timeline
 
 
 @asynccontextmanager
@@ -28,7 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(uhi.router, prefix="/uhi", tags=["UHI"])
+app.include_router(uhi.router,    prefix="/uhi",     tags=["UHI"])
+app.include_router(raster.router,   prefix="",          tags=["Raster"])
+app.include_router(timeline.router, prefix="",          tags=["Timeline"])
 app.include_router(history.router, prefix="/history", tags=["History"])
 app.include_router(route.router, prefix="/route", tags=["Routing"])
 app.include_router(risk.router, prefix="/risk", tags=["Risk"])

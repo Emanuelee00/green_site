@@ -11,6 +11,7 @@ dependencies = [
     "numpy>=2.4.6",
     "osmnx>=2.1.0",
     "pandas>=3.0.3",
+    "pillow>=12.2.0",
     "pydantic>=2.13.4",
     "pyproj>=3.7.2",
     "pyyaml>=6.0.3",
