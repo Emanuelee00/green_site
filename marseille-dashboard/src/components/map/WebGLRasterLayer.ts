@@ -9,11 +9,9 @@ const ZONES = [
 
 export type RasterIndex = "uhi" | "ndvi" | "ndwi" | "swir" | "urban";
 
-// ── Colormaps (t ∈ [0,1] → [r, g, b] ∈ [0,255]) ─────────────────────────────
+type RGB = [number, number, number];
 
 function lerp(a: number, b: number, t: number) { return Math.round(a + (b - a) * t); }
-
-type RGB = [number, number, number];
 
 function ramp(stops: RGB[], t: number): RGB {
   t = Math.max(0, Math.min(1, t));
@@ -39,13 +37,18 @@ const INDEX_URLS: Record<RasterIndex, string> = {
   urban: "/api/indices/urban/raw?scale=0.3",
 };
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-export interface AllZonesHistoryLayer extends AllZonesHistory {}
+// Raster geo bounds (EPSG:4326)
+const GEO = { south: 43.19994755263194, west: 5.249940079052022, north: 43.42001637152874, east: 5.5268096923828125 };
 
 interface RasterData { rows: number; cols: number; min: number; max: number; f32: Float32Array }
 
-// ── Layer ────────────────────────────────────────────────────────────────────
+export interface PixelProbe {
+  lat: number;
+  lon: number;
+  value: number;      // raw float32
+  normalized: number; // 0-1
+  index: RasterIndex;
+}
 
 export class WebGLRasterLayer extends L.Layer {
   private _overlay: L.ImageOverlay | null = null;
@@ -54,19 +57,22 @@ export class WebGLRasterLayer extends L.Layer {
   private _year    = 2023;
   private _index: RasterIndex = "uhi";
   private _visible = true;
-  private _loading = false;
 
-  private readonly _bounds = L.latLngBounds(
-    [43.19994755263194, 5.249940079052022],
-    [43.42001637152874, 5.5268096923828125],
-  );
+  onLoadingChange?: (loading: boolean) => void;
+  onProbe?: (probe: PixelProbe | null) => void;
+
+  private readonly _bounds = L.latLngBounds([GEO.south, GEO.west], [GEO.north, GEO.east]);
 
   onAdd(map: L.Map): this {
     if (this._cache.has(this._index)) this._render(map);
+    map.on("mousemove", this._onMouseMove, this);
+    map.on("mouseout",  this._onMouseOut,  this);
     return this;
   }
 
-  onRemove(_map: L.Map): this {
+  onRemove(map: L.Map): this {
+    map.off("mousemove", this._onMouseMove, this);
+    map.off("mouseout",  this._onMouseOut,  this);
     this._overlay?.remove();
     this._overlay = null;
     return this;
@@ -79,17 +85,20 @@ export class WebGLRasterLayer extends L.Layer {
   }
 
   async loadData(): Promise<void> {
+    this.onLoadingChange?.(true);
     await this._fetchIndex("uhi");
-    // Prefetch history for year-shift
     const histRes = await fetch("/api/uhi/raster/all-zones-history");
     this._history = await histRes.json();
+    this.onLoadingChange?.(false);
     this._render(this._map as L.Map);
   }
 
   async setIndex(index: RasterIndex): Promise<void> {
     this._index = index;
     if (!this._cache.has(index)) {
+      this.onLoadingChange?.(true);
       await this._fetchIndex(index);
+      this.onLoadingChange?.(false);
     }
     this._render(this._map as L.Map);
   }
@@ -99,24 +108,45 @@ export class WebGLRasterLayer extends L.Layer {
     if (this._cache.has(this._index)) this._render(this._map as L.Map);
   }
 
-  get isLoading() { return this._loading; }
+  // Returns raw value at lat/lon or null if outside/nodata
+  getValue(lat: number, lon: number): PixelProbe | null {
+    const raster = this._cache.get(this._index);
+    if (!raster) return null;
+    if (lat < GEO.south || lat > GEO.north || lon < GEO.west || lon > GEO.east) return null;
+
+    const { rows, cols, min, max, f32 } = raster;
+    const col = Math.round((lon - GEO.west)  / (GEO.east  - GEO.west)  * (cols - 1));
+    const row = Math.round((GEO.north - lat) / (GEO.north - GEO.south) * (rows - 1));
+    const idx = row * cols + col;
+    if (idx < 0 || idx >= f32.length) return null;
+
+    const value = f32[idx];
+    if (isNaN(value)) return null;
+
+    const range = max - min || 1;
+    const normalized = Math.max(0, Math.min(1, (value - min) / range + this._yearShift()));
+    return { lat, lon, value, normalized, index: this._index };
+  }
+
+  private _onMouseMove(e: L.LeafletMouseEvent): void {
+    if (!this._visible) { this.onProbe?.(null); return; }
+    this.onProbe?.(this.getValue(e.latlng.lat, e.latlng.lng));
+  }
+
+  private _onMouseOut(): void {
+    this.onProbe?.(null);
+  }
 
   private async _fetchIndex(index: RasterIndex): Promise<void> {
-    this._loading = true;
-    try {
-      const res = await fetch(INDEX_URLS[index]);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const raster: RasterData = {
-        rows: parseInt(res.headers.get("X-Raster-Rows") ?? "0"),
-        cols: parseInt(res.headers.get("X-Raster-Cols") ?? "0"),
-        min:  parseFloat(res.headers.get("X-Raster-Min") ?? "0"),
-        max:  parseFloat(res.headers.get("X-Raster-Max") ?? "1"),
-        f32:  new Float32Array(await res.arrayBuffer()),
-      };
-      this._cache.set(index, raster);
-    } finally {
-      this._loading = false;
-    }
+    const res = await fetch(INDEX_URLS[index]);
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${index}`);
+    this._cache.set(index, {
+      rows: parseInt(res.headers.get("X-Raster-Rows") ?? "0"),
+      cols: parseInt(res.headers.get("X-Raster-Cols") ?? "0"),
+      min:  parseFloat(res.headers.get("X-Raster-Min") ?? "0"),
+      max:  parseFloat(res.headers.get("X-Raster-Max") ?? "1"),
+      f32:  new Float32Array(await res.arrayBuffer()),
+    });
   }
 
   private _yearShift(): number {
@@ -131,9 +161,9 @@ export class WebGLRasterLayer extends L.Layer {
     if (!raster) return;
 
     const { rows, cols, min, max, f32 } = raster;
-    const range  = max - min || 1;
-    const shift  = this._yearShift();
-    const cmap   = COLORMAPS[this._index];
+    const range = max - min || 1;
+    const shift = this._yearShift();
+    const cmap  = COLORMAPS[this._index];
 
     const canvas = document.createElement("canvas");
     canvas.width = cols; canvas.height = rows;
@@ -146,14 +176,12 @@ export class WebGLRasterLayer extends L.Layer {
       if (isNaN(v)) { px[i*4+3] = 0; continue; }
       const t = Math.max(0, Math.min(1, (v - min) / range + shift));
       const [r, g, b] = cmap(t);
-      px[i*4] = r; px[i*4+1] = g; px[i*4+2] = b; px[i*4+3] = 209;
+      px[i*4] = r; px[i*4+1] = g; px[i*4+2] = b; px[i*4+3] = 210;
     }
 
     ctx.putImageData(img, 0, 0);
-    const url = canvas.toDataURL("image/png");
-
     this._overlay?.remove();
-    this._overlay = L.imageOverlay(url, this._bounds, { opacity: 1, interactive: false }).addTo(map);
+    this._overlay = L.imageOverlay(canvas.toDataURL("image/png"), this._bounds, { opacity: 1, interactive: false }).addTo(map);
     if (!this._visible) {
       const el = this._overlay.getElement();
       if (el) el.style.display = "none";
