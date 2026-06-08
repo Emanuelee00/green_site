@@ -563,51 +563,6 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        {/* ── Satellite indices divider ── */}
-        <div className="flex items-center gap-4 py-1">
-          <div className="h-px flex-1" style={{ background: C.border }} />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: C.muted }}>
-            Satellite Indices
-          </span>
-          <div className="h-px flex-1" style={{ background: C.border }} />
-        </div>
-
-        {/* Sentinel-2 indices overview */}
-        <Card>
-          <CardHeader
-            title="Sentinel-2 L2A · Indices · Marseille · août 2023"
-            sub="NDVI (végétation) · NDWI (humidité) · Urban (imperméabilisation) · SWIR (infrarouge courtes ondes)"
-          />
-          <div className="p-5 flex flex-col gap-4">
-            <img
-              src="/marseille_overview.png"
-              alt="Sentinel-2 indices — NDVI, NDWI, Urban, SWIR — Marseille août 2023"
-              className="w-full rounded"
-              style={{ border: `1px solid ${C.borderSub}` }}
-            />
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { key: "NDVI", label: "Végétation", desc: "Densité du couvert végétal. Valeurs hautes = forte végétation (forêt, parcs). Valeurs basses = sol nu, bitume.", color: "#4daa74" },
-                { key: "NDWI", label: "Eau & Humidité", desc: "Teneur en eau de surface. Bleu intense = mer/eau libre. Valeurs moyennes = humidité du sol.", color: "#4a90c4" },
-                { key: "Urban", label: "Imperméabilisation", desc: "Surfaces artificialisées. Rouge/brun = zones bâties denses. Vert foncé = végétation ou eau.", color: C.warm },
-                { key: "SWIR", label: "Infrarouge courtes ondes", desc: "Humidité sol & végétation. Vert clair = humide. Vert foncé = sec. Permet de détecter le stress hydrique.", color: "#7ab87a" },
-              ].map(({ key, label, desc, color }) => (
-                <div key={key} className="rounded border p-3 flex flex-col gap-2"
-                  style={{ background: C.raised, borderColor: C.borderSub, borderTopColor: color, borderTopWidth: 2 }}>
-                  <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{key}</div>
-                    <div className="text-[11px] font-semibold mt-0.5" style={{ color: C.text }}>{label}</div>
-                  </div>
-                  <p className="text-[10px] leading-relaxed" style={{ color: C.muted }}>{desc}</p>
-                </div>
-              ))}
-            </div>
-            <div className="text-[10px] text-right" style={{ color: C.dim }}>
-              Source: Sentinel Hub · Sentinel-2 L2A · 22 août 2023
-            </div>
-          </div>
-        </Card>
-
         <div className="text-center py-2 text-[10px]" style={{ color: C.dim }}>
           Sentinel-2 L2A · MODIS LST 2000–2024 · OSMnx · marseille-engine API
         </div>
