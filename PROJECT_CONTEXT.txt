@@ -12,7 +12,7 @@ STRUTTURA GENERALE
 ================================================================================
 
 /goinfre/eielmini/green_project/
-├── heatmap-marseille/     → SORGENTE DATI (non toccare)
+├── heatmap-marseille/     → SORGENTE DATI
 ├── marseille-engine/      → Backend API (FastAPI + Python)
 ├── marseille-app/         → Web app 3D hero (React + Vite + Three.js)
 ├── marseille-dashboard/   → Admin dashboard professionale (React + Vite + Tailwind)
@@ -31,6 +31,9 @@ File usati dal motore:
 - indices/swir.tif               → SWIR normalizzato (B11)
 - indices/urban.tif              → Proxy impermeabilizzazione (B11/B08)
 
+Copia degli indici anche in /goinfre/eielmini/heatmap-marseille/indices/ (per
+compatibilita con entrambe le istanze dell'engine).
+
 Indice UHI composito: 40% SWIR + 30% NDVI + 10% Urban + 10% NDWI
 Raster CRS: EPSG:4326 — bounds: W5.25, E5.53, S43.20, N43.42 — shape 2284x2090
 
@@ -40,14 +43,13 @@ Indici Sentinel-2 scaricati con scripts/download_s2_indices.py da:
 
 Zone MODIS (9): centre_ville, nord_urbain, sud_urbain, periurbain_est,
 periurbain_nord, rural_est, rural_nord, rural_ouest, rural_sud
-CSV columns: LST_jour_C, LST_nuit_C, amplitude_C, annee, date, zone — Nodata: -9999
 
 ================================================================================
 2. marseille-engine/ — BACKEND API
 ================================================================================
 
 Stack: Python 3.13, FastAPI, uv — Port: 8000
-Package manager: uv — SEMPRE: UV_PYTHON=/usr/bin/python3
+SEMPRE: UV_PYTHON=/usr/bin/python3
 
 --- Avvio ---
 make run             → solo API
@@ -64,24 +66,20 @@ api/routers/
 ├── raster.py    → /uhi/raster.png, /uhi/raster/raw, /uhi/raster/bounds,
 │                   /uhi/raster/all-zones-history
 ├── timeline.py  → /timeline/snapshot?year=, /timeline/range
-└── indices.py   → /indices/{name}/raw, /indices/available
-                   (name: ndvi | ndwi | swir | urban)
+└── indices.py   → /indices/{name}/raw?scale=, /indices/available
+                   name: ndvi | ndwi | swir | urban
                    Stesso wire-format di /uhi/raster/raw (float32 + X-Raster-* headers)
+                   Path cercato in ordine:
+                     /goinfre/eielmini/green_project/heatmap-marseille/indices/
+                     /goinfre/eielmini/heatmap-marseille/indices/
 
---- Script utilità ---
+--- Script utilita ---
 scripts/download_s2_indices.py → scarica bande S2 da AWS COG, calcola 4 indici
   Uso: UV_PYTHON=/usr/bin/python3 uv run python scripts/download_s2_indices.py
-  Gia eseguito — indici in heatmap-marseille/indices/
+  Gia eseguito — indici disponibili in entrambe le locazioni
 
 --- Routing ---
-A* (nx.astar_path) con euristica geografica euclidea in CRS proiettato
-green_weight: lunghezza base + sconto 35% pedonale + sconto 30% fresco + penalita 40% caldo
-
---- Boot ---
-1. Carica marseille_uhi.tif in RAM (NaN=nodata)
-2. Carica quartiers.geojson + zonal_stats -> 111 quartieri con uhi_mean/score/rank
-3. Carica MODIS CSV
-4. Scarica grafo OSM Marsiglia 3.3km (cached) + applica green_weight
+A* (nx.astar_path) — green_weight: lunghezza + sconti pedonale/fresco + penalita caldo
 
 --- Vincoli macchina (42 school) ---
 - /home/eielmini PIENO → tutto su /goinfre/eielmini/
@@ -95,10 +93,6 @@ green_weight: lunghezza base + sconto 35% pedonale + sconto 30% fresco + penalit
 
 Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4 — Port: 5173
 Librerie: leaflet, @react-three/fiber, three, framer-motion
-
-src/screens/: HeroScreen, RoutesScreen, RouteDetailScreen
-src/components/CalanqueScene.tsx → Three.js acqua + cliff + stelle
-App.tsx: state machine hero → routes → detail con AnimatePresence
 Avvio: node node_modules/vite/bin/vite.js
 
 ================================================================================
@@ -108,62 +102,66 @@ Avvio: node node_modules/vite/bin/vite.js
 Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4, Recharts, Leaflet
 Port: 5174 — Proxy: /api/* → localhost:8000
 
-Design system dark professionale — NO glass-morphism, colore solo per dati
-Token (C in Dashboard.tsx): base #060d14, panel #0a1520, raised #0f1f30,
-border #18304a, text #d4e0ec, muted #4a6a88, hot #e05252, warm #d4914a, cool #4daa74
+Design system dark professionale:
+  Token C: base #060d14, panel #0a1520, raised #0f1f30
+  border #18304a, text #d4e0ec, muted #4a6a88
+  hot #e05252, warm #d4914a, cool #4daa74
+  No glass-morphism. Colore solo dove ha significato semantico.
+  SegmentedControl per toggle. Card con top-border (2px) colorato.
 
 --- src/ ---
 api/engine.ts          → fetchQuartiers, fetchRisk, fetchHistory, fetchAllZonesHistory
-types/index.ts         → tipi condivisi + ZONES + AllZonesHistory
+types/index.ts         → tipi + ZONES + AllZonesHistory
 pages/Dashboard.tsx    → pagina principale unica
 
 components/map/
-  UHIMap.tsx           → Leaflet + Canvas2D overlay + layer switching per indice
-  WebGLRasterLayer.ts  → Canvas2D raster (NO WebGL), cache per indice, colormaps
-  TimelineSlider.tsx   → slider 2000-2024 + fonte dati anno + anomalia media citta
+  UHIMap.tsx           → Leaflet + Canvas2D overlay + pixel probe + loading state
+  WebGLRasterLayer.ts  → Canvas2D raster, cache per indice, colormaps, getValue()
+  TimelineSlider.tsx   → slider 2000-2024 + fonte dati + anomalia media citta
 
 components/charts/
   HistoryChart.tsx     → trend LST + regressione + 2003 highlight
-  SeasonalChart.tsx    → profilo stagionale (barre colorate)
+  SeasonalChart.tsx    → profilo stagionale
   RankingChart.tsx     → 111 quartieri ordinati
-  DistributionPanel.tsx → istogramma distribuzione + confronto arrondissement
-  AnomalyMatrix.tsx    → griglia 9zone x 25anni (colormap divergente blu-bianco-rosso)
-                          zone senza dati mostrano pattern tratteggiato + badge N/D
-  MultiZoneChart.tsx   → confronto LST fino a 4 zone, pill interattive, recharts
-
-public/
-  marseille_overview.png  → immagine 2x2 indici Sentinel-2 (statica R/ggplot2)
-  marseille_uhi.png       → overview UHI
+  DistributionPanel.tsx → istogramma + confronto arrondissement
+  AnomalyMatrix.tsx    → griglia 9zone x 25anni (blu-bianco-rosso, N/D per no-data)
+  MultiZoneChart.tsx   → confronto LST fino a 4 zone, pill, recharts
 
 --- Renderer raster ---
-Canvas2D puro (no WebGL, no OES_texture_float) — universalmente compatibile
-Flow: fetch float32 -> normalizza in JS -> putImageData -> L.imageOverlay
-Cache per indice: primo fetch poi switch istantaneo
+Canvas2D puro (no WebGL — OES_texture_float non disponibile su 42 school)
+Flow: fetch float32 → normalizza in JS → putImageData → L.imageOverlay
+Cache per indice: primo fetch poi switch istantaneo senza rete
 
---- Layer indici mappa ---
-Toolbar segmentata: UHI | NDVI | NDWI | SWIR | Urban
+--- Layer indici mappa (toolbar segmentata) ---
+UHI | NDVI | NDWI | SWIR | Urban
+
 Colormaps:
-  UHI:   verde->giallo->arancio->rosso
+  UHI:   verde->giallo->arancio->rosso (con year-shift MODIS)
   NDVI:  rosso-bruno->giallo->verde
   NDWI:  marrone->bianco->blu
   SWIR:  verde scuro->giallo chiaro
   Urban: verde->arancio->rosso
-Se TIF non disponibile -> overlay "Index not available / run download script"
-Year-shift MODIS applicato solo al layer UHI (altri indici sono statici Aug 2023)
 
---- Features ---
+Pixel probe interattivo (hover sulla mappa):
+  - getValue(lat, lon) campiona il float32 array via nearest-neighbor
+  - Pannello top-left: nome indice, valore esatto, barra colorata, lat/lon
+  - UHI: mostra anno corrente quando non in hover
+  - Altri indici: "Hover for value" quando idle
+  - Loading spinner durante fetch di un nuovo indice
+
+--- Features dashboard ---
 Header: wordmark tipografico, Export CSV, Export GeoJSON, dot Live
-KPI 5 card: avg UHI, hot/cool districts, hottest/coolest zone (top-border colorato)
+KPI 5 card: avg UHI, hot/cool districts, hottest/coolest zone
 Mappa: Pixel/Districts/Both + UHI Score/Heat Risk + indice selector + timeline
 Districts: threshold filter slider (0-90%), lista filtrata con stats
-Quartier detail: score gauge, percentile, monthly risk bars, distribution panel
+Quartier detail: score gauge, percentile, monthly risk bars, distribution
 Analysis Tools:
-  - Zone x Year Anomaly Matrix (hover per LST esatto + anomalia)
-  - Multi-zone LST Comparison (selezione pill, marker 2003, trend/decade in legenda)
+  - Zone x Year Anomaly Matrix (hover per LST + anomalia esatta)
+  - Multi-zone LST Comparison (pill, marker 2003, trend/decade in legenda)
 TimelineSlider:
   - Fonte dati per anno (MODIS baseline / post-baseline / S2+MODIS)
   - Anomalia media citta (arrow + gradi vs baseline)
-  - Tick colorati anni chiave (2003 heatwave rosso, 2010 grigio, 2015 arancio, 2023 verde)
+  - Tick colorati anni chiave
 
 ================================================================================
 5. fresh-route/ — APP MOBILE (Expo)
@@ -175,8 +173,6 @@ Avvio:
 EXPO_NO_DOTEXPO_FOLDER=1 TMPDIR=/goinfre/eielmini/.expo-cache HOME=/goinfre/eielmini
 node node_modules/expo/bin/cli start --web --port 8081
 
-app/: _layout, index (hero 3D), routes, route-detail, heatmap
-src/components/scene/: CalanqueScene, Terrain, CalanqueMarkers, SceneLighting, StarField
 6 calanques reali interattive con route arc 3D, OrbitControls
 
 ================================================================================
@@ -190,13 +186,10 @@ make start-dashboard # API + dashboard      -> :8000 + :5174
 make start-mobile    # API + Expo web       -> :8000 + :8081
 make run             # solo API             -> :8000
 
-# Indici Sentinel-2 (gia scaricati in heatmap-marseille/indices/)
-UV_PYTHON=/usr/bin/python3 uv run python scripts/download_s2_indices.py
-
 # Test API
 curl http://localhost:8000/health
 curl "http://localhost:8000/indices/available"
-curl "http://localhost:8000/uhi/raster/raw?scale=0.3" -I
+curl "http://localhost:8000/indices/ndvi/raw?scale=0.3" -I
 
 # npm su 42
 npm_config_cache=/goinfre/eielmini/.npm-cache npm install <pkg>
@@ -212,8 +205,8 @@ Branch: emanuele
 PROSSIMI STEP SUGGERITI
 ================================================================================
 
-1. Scatter plot NDVI vs UHI per quartiere (correlazione vegetazione-calore)
-2. App mobile: react-native-maps per visualizzare il percorso sulla mappa
+1. Scatter plot NDVI vs UHI per quartiere (correlazione spaziale)
+2. App mobile: react-native-maps per percorso sulla mappa
 3. Le altre 3 app: heat risk alerts, valutazione immobiliare, piattaforma educativa
 4. Docker: build e deploy su VPS
 5. Play Store: EAS build + account Expo
