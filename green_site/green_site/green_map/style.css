@@ -1,0 +1,767 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap");
+
+:root{
+  --radius: 22px;
+
+  --green: #2e7d32;
+  --green2:#1b5e20;
+
+  /* Sfondo unico pagina (forest default) */
+  --bg:
+    radial-gradient(900px 520px at 30% 0%, rgba(46,125,50,0.55), transparent 62%),
+    linear-gradient(135deg, rgba(10,20,18,0.92), rgba(10,20,18,0.55));
+}
+
+/* RESET */
+*{ box-sizing:border-box; }
+html, body{margin:0; padding: 0;}
+
+/* ✅ IMPORTANTISSIMO: sfondo identico su html e body (zero bande) */
+html{
+    margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100%;
+  background: var(--bg) !important;
+  background-attachment: fixed;
+  background: var(--bg)!important;
+  background-attachment: fixed; /* evita “salti” durante scroll */
+}
+body{
+  min-height: 100vh;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+/* overlay globale su tutta la pagina (non solo header) */
+body::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  pointer-events:none;
+  background: radial-gradient(1400px 900px at 50% 25%, rgba(255,255,255,0.06), transparent 60%);
+  z-index: -1;
+}
+
+/* RTL */
+body.rtl{ direction: rtl; text-align:right; }
+
+/* HEADER */
+header{
+  background: transparent;
+  color:#fff;
+  text-align:center;
+  padding: 54px 16px 0;
+}
+
+.hero-inner{
+  min-height: 300px;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:flex-end;   /* più in basso */
+  gap: 14px;
+  padding-bottom: 26px;
+}
+
+.brand{
+  display:inline-flex;
+  align-items:center;
+  gap: 14px;
+}
+
+#title{
+  margin:0;
+  color:#fff !important;
+  font-family:"Playfair Display", serif;
+  font-size: clamp(40px, 5vw, 72px);
+  letter-spacing: .5px;
+  text-shadow: 0 14px 30px rgba(0,0,0,.55);
+}
+
+#subtitle{
+  margin:0;
+  color: rgba(255,255,255,0.92) !important;
+  font-size: clamp(15px, 1.8vw, 20px);
+  text-shadow: 0 10px 24px rgba(0,0,0,.55);
+  max-width: 780px;
+}
+
+/* piantina */
+.plant-badge{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display:grid;
+  place-items:center;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 16px 28px rgba(0,0,0,0.18);
+  cursor:pointer;
+  padding:0;
+}
+.plant-badge:hover{ transform: scale(1.06); }
+.plant-icon{ font-size: 22px; }
+
+.plant-badge.bounce .plant-icon{ animation: plantBounce 480ms ease; }
+@keyframes plantBounce{
+  0%{transform: translateY(0) rotate(0) scale(1);}
+  28%{transform: translateY(-7px) rotate(-10deg) scale(1.08);}
+  55%{transform: translateY(0) rotate(12deg) scale(1.02);}
+  100%{transform: translateY(0) rotate(0) scale(1);}
+}
+
+/* lingua */
+.hero-actions{ display:flex; justify-content:center; }
+.lang-switcher{ position: relative; display:inline-flex; }
+
+.lang-switcher select{
+  appearance:none;
+  -webkit-appearance:none;
+  padding: 11px 44px 11px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+  outline:none;
+}
+.lang-switcher select option{ color:#0f172a; background:#fff; }
+
+.lang-switcher::after{
+  content:"▾";
+  position:absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.9);
+  pointer-events:none;
+  font-size: 14px;
+}
+
+/* MAIN */
+main{
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 18px 18px; /* niente padding-top = niente stacco */
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  background: transparent;
+  align-items: start;
+}
+
+body.rtl main{ grid-template-columns: 1fr 320px; }
+
+/* FILTRI: senza contenitore, tutto bianco */
+.filters{
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color:#fff;
+}
+
+.filters h2{
+  margin:0 0 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#fff;
+}
+
+.filters h2::before{
+  content:"";
+  width:10px; height:22px;
+  border-radius:999px;
+  background: linear-gradient(180deg, var(--green), var(--green2));
+}
+
+.filter{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding: 12px 0;
+  cursor:pointer;
+  user-select:none;
+  border-radius: 14px;
+}
+.filter:hover{ background: rgba(255,255,255,0.10); }
+.filter input{ width:18px; height:18px; accent-color:#fff; }
+.filter span{ font-weight:700; color:#fff; }
+
+/* =========================
+   MAP
+========================= */
+.map{ position: relative; }
+
+.map-wrap{
+  position: relative;
+  height: 560px;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+#mapFrame{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.map-wrap.is-fullscreen{
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  z-index: 999999;
+}
+
+.fs-btn{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 9999;
+
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+
+  border: 1px solid rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.fs-btn:hover{
+  transform: scale(1.05);
+}
+
+
+/* info card */
+.info-card{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  width: min(320px, calc(100% - 36px));
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(255,255,255,0.40);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.info-card h3{ margin:0 0 6px; font-size:16px; color:#0f172a; }
+.info-card p{ margin:0 0 12px; color: rgba(15,23,42,0.75); font-size:14px; }
+.info-card button{
+  width:100%;
+  border:0;
+  border-radius:14px;
+  padding:10px 12px;
+  font-weight:800;
+  color:#fff;
+  cursor:pointer;
+  background: linear-gradient(180deg, var(--green), var(--green2));
+}
+
+/* =========================
+   FOOTER — CENTRATO + LINK AZZURRI
+========================= */
+footer{
+  width: 100%;
+  display: flex;
+  justify-content: center;   /* ✅ centrato */
+  padding: 18px 18px 26px;
+}
+
+footer p{
+  margin: 0;
+  text-align: center;
+
+  /* glass */
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  color: rgba(255,255,255,0.92);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+
+  padding: 14px 18px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* pallino eco */
+footer p::before{
+  content:"";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--green), var(--green2));
+  box-shadow: 0 10px 18px rgba(46,125,50,0.35);
+}
+
+/* ✅ link SEMPRE azzurri (mai viola) */
+footer a,
+footer a:visited{
+  color: #38bdf8;            /* azzurro */
+  text-decoration: none;
+  font-weight: 800;
+}
+
+footer a:hover{
+  text-decoration: underline;
+  filter: brightness(1.1);
+}
+
+/* hover pill */
+footer p:hover{
+  transform: translateY(-1px);
+  transition: 220ms ease;
+}
+
+
+/* mobile */
+@media (max-width: 920px){
+  footer{
+    margin-top: 22px;
+    padding: 14px 14px 18px;
+  }
+}
+/* THEMES */
+body.theme-forest{
+  --bg:
+    radial-gradient(900px 520px at 30% 0%, rgba(46,125,50,0.55), transparent 62%),
+    linear-gradient(135deg, rgba(10,20,18,0.92), rgba(10,20,18,0.55));
+}
+body.theme-ocean{
+  --bg:
+    radial-gradient(900px 520px at 30% 0%, rgba(14,165,233,0.55), transparent 62%),
+    linear-gradient(135deg, rgba(6,18,28,0.92), rgba(6,18,28,0.55));
+  --green:#0284c7; --green2:#0ea5e9;
+}
+body.theme-sunset{
+  --bg:
+    radial-gradient(900px 520px at 30% 0%, rgba(251,113,133,0.55), transparent 62%),
+    linear-gradient(135deg, rgba(30,12,18,0.92), rgba(30,12,18,0.55));
+  --green:#f97316; --green2:#fb7185;
+}
+body.theme-night{
+  --bg:
+    radial-gradient(900px 520px at 30% 0%, rgba(34,197,94,0.35), transparent 62%),
+    linear-gradient(135deg, rgba(0,0,0,0.92), rgba(0,0,0,0.55));
+  --green:#22c55e; --green2:#16a34a;
+}
+
+/* === FIX PEZZETTINO IN BASSO (forza uniforme) === */
+html, body{
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg) !important;
+}
+
+body{
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+
+
+
+/* se hai ancora un filo: blocca overflow verticale (solo se serve) */
+html{
+  overflow-y: auto;
+}
+
+/* DEBUG (solo per capire chi è colpevole) - attivalo un attimo:
+*{ outline: 1px solid rgba(255,0,0,.15); }
+*/
+
+.filters-sep{
+  opacity:.25;
+  margin: 14px 0;
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,.25);
+}
+
+.route-title{
+  margin: 0 0 10px;
+  color:#fff;
+}
+
+.route-panel{
+  display: grid;
+  gap: 12px;
+  align-items: center;
+}
+
+.route-btn{
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 900;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--green), var(--green2));
+  box-shadow: 0 14px 28px rgba(0,0,0,.25);
+}
+
+.route-btn:hover{
+  transform: translateY(-1px);
+  transition: 180ms ease;
+}
+
+.route-meta{
+  display: grid;
+  gap: 8px;
+  justify-items: center;   /* ✅ centrati */
+  text-align: center;
+}
+
+.coord-pill{
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .2px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-hint{
+  text-align: center;      /* ✅ centrato */
+  color: rgba(255,255,255,0.80);
+  font-weight: 700;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+
+.route-stats{
+  margin-top: 12px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  padding: 10px 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.stat-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 6px 0;
+  color: rgba(255,255,255,0.88);
+  font-weight: 700;
+}
+.stat-row b{ color:#fff; font-weight: 900; }
+
+.route-list{
+  margin-top: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.route-item{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+.route-item:hover{ background: rgba(255,255,255,0.14); }
+
+.route-item .name{
+  color:#fff;
+  font-weight: 900;
+}
+.route-item .km{
+  color: rgba(255,255,255,0.88);
+  font-weight: 800;
+}
+
+.route-item.active{
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.25);
+}
+
+
+.loc-btn{
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+
+  padding: 11px 16px;
+  border-radius: 999px;
+
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+  outline: none;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  transition: 200ms ease;
+}
+
+.loc-btn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.22);
+}
+
+.loc-btn:active{
+  transform: translateY(0px);
+  opacity: 0.9;
+}
+
+
+
+/* ======================================================
+   ✅ FIX DEFINITIVO: niente riquadri bianchi + spazi premium
+   ====================================================== */
+
+/* 1) FORZA stile scuro su TUTTI i campi nel pannello pins */
+#pinsPanel select,
+#pinsPanel textarea,
+#pinsPanel input[type="text"],
+#pinsPanel input[type="search"],
+#pinsPanel input[type="email"],
+#pinsPanel input[type="number"],
+#pinsPanel input[type="url"],
+#pinsPanel input[type="tel"],
+#pinsPanel input:not([type]),
+/* fallback: se non hai #pinsPanel, prende la sezione pins nella sidebar */
+.filters select,
+.filters textarea,
+.filters input[type="text"],
+.filters input:not([type]){
+  background: rgba(0,0,0,0.26) !important;   /* niente bianco */
+  color: rgba(255,255,255,0.92) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 14px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -12px 22px rgba(0,0,0,0.40) !important;
+  outline: none !important;
+}
+
+/* Placeholder */
+#pinsPanel input::placeholder,
+#pinsPanel textarea::placeholder,
+.filters input::placeholder,
+.filters textarea::placeholder{
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* Focus premium */
+#pinsPanel select:focus,
+#pinsPanel textarea:focus,
+#pinsPanel input:focus,
+.filters select:focus,
+.filters textarea:focus,
+.filters input:focus{
+  border-color: rgba(34,197,94,0.45) !important;
+  box-shadow:
+    0 0 0 4px rgba(34,197,94,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -12px 22px rgba(0,0,0,0.42) !important;
+  background: rgba(0,0,0,0.30) !important;
+}
+
+/* 2) SELECT: elimina look bianco di default + freccia coerente */
+#pinsPanel select,
+.filters select{
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+
+  padding-right: 44px !important;
+
+  background-image:
+    radial-gradient(circle at 86% 50%, rgba(34,197,94,0.18), transparent 52%),
+    linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.55) 50%),
+    linear-gradient(135deg, rgba(255,255,255,0.55) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 18px) 52%,
+    calc(100% - 12px) 52% !important;
+  background-size:
+    26px 26px,
+    6px 6px,
+    6px 6px !important;
+  background-repeat: no-repeat !important;
+}
+
+/* 3) Opzioni (alcuni browser ignorano, ma aiuta) */
+#pinsPanel option,
+.filters option{
+  background: #08110d !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+
+/* 4) Sistemazione layout: allinea label e campi, evita “salti” */
+#pinsPanel .field,
+#pinsPanel .filter,
+.filters .field{
+  margin-bottom: 14px;
+}
+
+#pinsPanel label,
+.filters label{
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* 5) Spazio tra i due bottoni + spazio sotto */
+#pinsPanel .btn-row{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;              /* ✅ più distanza tra i bottoni */
+  margin-top: 10px;
+  margin-bottom: 18px;    /* ✅ più aria prima di "Itinéraire" */
+}
+
+/* Se i bottoni non sono in .btn-row (fallback) */
+#btnAddPin,
+#btnClearPins{
+  width: 100%;
+  margin-top: 10px;
+}
+
+#btnClearPins{
+  margin-top: 12px;       /* ✅ distanza dal primo */
+  margin-bottom: 18px;    /* ✅ distanza dal basso */
+}
+
+/* 6) Bottoni premium coerenti */
+#btnAddPin{
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+#btnClearPins{
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 800;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.90);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Hover bottoni */
+#btnAddPin:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+#btnClearPins:hover{ background: rgba(255,255,255,0.09); transform: translateY(-1px); }
+
+/* ==============================
+   ✅ Allineamento Pins + misure
+   ============================== */
+
+/* Layout a 2 colonne: label | campo */
+#pinsPanel .field{
+  display: grid;
+  grid-template-columns: 120px 1fr;  /* label fissa, campo fluido */
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* label allineate */
+#pinsPanel .field label{
+  margin: 0;
+  justify-self: start;
+}
+
+/* campi tutti della stessa larghezza e centrati */
+#pinsPanel .field input,
+#pinsPanel .field select,
+#pinsPanel .field textarea{
+  width: 100% !important;
+  max-width: 260px;          /* ✅ stessa larghezza “premium” */
+  justify-self: start;
+}
+
+/* Titolo: più lungo (come categoria) */
+#pinTitle{
+  width: 100% !important;
+  max-width: 260px !important;
+}
+
+/* Descrizione: meno spessa */
+#pinDesc{
+  min-height: 22px !important;  /* ✅ più bassa */
+  height:22px !important;
+  resize: vertical;
+}
+
+/* ✅ fallback: senza :has() */
+label.filter{
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+/* solo description: sistemiamo con selettore diretto */
+#pinDesc{
+  height: 22px !important;
+  min-height: 22px !important;
+  resize: none;
+}
+
+#pinDesc{
+  position: relative;
+  top: 2px; /* riallinea visivamente con la scritta */
+}
+

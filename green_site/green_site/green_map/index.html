@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Green Map</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.2.0/leaflet.fullscreen.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+
+<body class="theme-forest">
+  <header>
+    <div class="hero-inner">
+
+      <div class="brand">
+        <button id="plantBtn" class="plant-badge" type="button" title="Cambia stile" aria-label="Cambia stile">
+          <span class="plant-icon" id="plantIcon">🌿</span>
+        </button>
+
+        <h1 id="title" data-i18n="title">Green Map</h1>
+      </div>
+
+      <p id="subtitle" data-i18n="subtitle">Scopri i luoghi sostenibili vicino a te</p>
+
+      <div class="hero-actions">
+        <div class="lang-switcher">
+          <select id="language" aria-label="Seleziona lingua">
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="ar">🇸🇦 العربية</option>
+          </select>
+        </div>
+        <button class="loc-btn" type="button" onclick="GM.useMyLocation()">
+  📍 My location
+</button>
+
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside class="filters">
+  <h2 id="filters-title" data-i18n="filtersTitle">Filters</h2>
+
+  <hr class="filters-sep">
+  
+  
+  <label class="filter">
+    <input type="checkbox" data-layer="Quartiers" checked>
+    <span data-i18n="layer_quartiers">Quartiers</span>
+  </label>
+  
+  <label class="filter">
+    <input type="checkbox" data-layer="Zones vertes OSM" checked>
+    <span data-i18n="layer_green_osm">Zones vertes OSM</span>
+  </label>
+  
+  <label class="filter">
+    <input type="checkbox" data-layer="Fontaines OSM" checked>
+    <span data-i18n="layer_fountains_osm">Fontaines OSM</span>
+  </label>
+  
+  <label class="filter">
+    <input type="checkbox" data-layer="Zones chaudes (proxy)" checked>
+    <span data-i18n="layer_hot_zones">Zones chaudes (proxy)</span>
+  </label>
+  
+  <label class="filter">
+    <input type="checkbox" data-layer="NDVI (Copernicus, été 2024)" checked>
+    <span data-i18n="layer_ndvi">NDVI (Copernicus, été 2024)</span>
+  </label>
+  
+  
+  
+  
+  <hr class="filters-sep">
+  
+  <h2>Pins</h2>
+  
+  <label class="filter">
+    <span>Catégorie</span>
+    <select id="pinCategory">
+      <option value="attivita">Activités</option>
+      <option value="sport">Sport</option>
+      <option value="proposte">Propositions</option>
+    </select>
+  </label>
+
+       <label class="filter">
+        <span>Titre</span>
+        <input id="pinTitle" type="text" placeholder="Ex. Yoga au parc" />
+      </label>
+      
+      <label class="filter">
+        <span>Description</span>
+        <textarea id="pinDesc" rows="3" placeholder="Détails..."></textarea>
+      </label>
+      
+      <button id="btnAddPin" type="button" class="route-btn">
+        📌 Ajouter un pin (clique sur la carte)
+      </button>
+      
+      <button id="btnClearPins" type="button" class="route-btn" style="opacity:.85">
+        🧹 Supprimer tous les pins
+      </button>
+  
+ 
+</aside>
+
+
+
+    <section class="map">
+  <div class="map-wrap" id="mapWrap">
+    <iframe
+      id="mapFrame"
+      src="map_folium.html"
+      class="map-iframe"
+      style="width:100%;height:100%;border:0;border-radius:inherit;"
+    ></iframe>
+    <button id="fs-btn" class="fs-btn" type="button" title="Schermo intero">⛶</button>
+  </div>
+   
+  <h2 class="route-title" data-i18n="routeTitle">Percorso</h2>
+  
+  <div class="route-panel">
+    <button id="btnRoute" class="route-btn" type="button" data-i18n="routeBtn">
+      Calcola percorsi green
+     
+  </button>
+
+  <div class="route-meta">
+    <div id="startLine" class="coord-pill" data-i18n-prefix="startLabel">Start: —</div>
+    <div id="endLine" class="coord-pill" data-i18n-prefix="endLabel">End: —</div>
+  </div>
+
+  <div class="route-hint" data-i18n="routeHint">
+    Clicca sulla mappa per scegliere la destinazione.
+  </div>
+</div>
+
+
+  <div id="routeStats" class="route-stats" hidden>
+    <div class="stat-row">
+      <span>Percorsi trovati</span><b id="statCount">0</b>
+    </div>
+    <div class="stat-row">
+      <span>Selezionato</span><b id="statName">—</b>
+    </div>
+    <div class="stat-row">
+      <span>Distanza</span><b id="statKm">—</b>
+    </div>
+    <div class="stat-row">
+      <span>Area analizzata</span><b id="statDist">—</b>
+    </div>
+  </div>
+
+  <div id="routeList" class="route-list"></div>
+
+  
+
+</section>
+  </main>
+
+  <footer>
+  <p>
+    Green Map • Eco Project 🌍 <br />
+    <a href="#">Privacy</a> • <a href="#">Contacts</a>
+  </p>
+</footer>
+
+  <!-- JS libs -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.2.0/Leaflet.fullscreen.min.js"></script>
+
+  
+  
+  <!-- collegamento checkbox -> iframe -->
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const iframe = document.getElementById("mapFrame");
+  if (!iframe) {
+    console.warn("iframe #mapFrame non trovato");
+    return;
+  }
+  
+  function sendToggle(layerName, enabled) {
+    if (!iframe.contentWindow) return;
+    iframe.contentWindow.postMessage(
+      { type: "GM_TOGGLE_LAYER", layerName, enabled: !!enabled },
+      "*"
+    );
+  }
+  
+  document.querySelectorAll('input[type="checkbox"][data-layer]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      sendToggle(cb.dataset.layer, cb.checked);
+    });
+  });
+  
+  iframe.addEventListener("load", () => {
+    document.querySelectorAll('input[type="checkbox"][data-layer]').forEach(cb => {
+      sendToggle(cb.dataset.layer, cb.checked);
+    });
+  });
+});
+window.addEventListener("message", (ev) => {
+  if(ev.data?.type === "GM_MAP_CLICK"){
+    console.log("END scelto:", ev.data.lat, ev.data.lon);
+    // qui salvi endLat/endLon e aggiorni UI
+  }
+});
+
+</script>
+<script src="script.js"></script>
+<script src="js/geolocate.js"></script>
+<script src="js/route.js"></script>
+
+</body>
+</html>

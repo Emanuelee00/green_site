@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_4d9e86be79e0ad0eecc06b1bb9515138 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<div style="position: fixed; bottom: 30px; left: 30px; z-index:1000;
+     background-color: white; padding: 15px; border-radius: 8px;
+     border: 2px solid grey; font-size: 14px;">
+  <b>Zones de mesure</b><br><br>
+  <span style="color:red;">●</span> Urbain<br>
+  <span style="color:green;">●</span> Rural<br>
+</div>
+    
+            <div class="folium-map" id="map_4d9e86be79e0ad0eecc06b1bb9515138" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_4d9e86be79e0ad0eecc06b1bb9515138 = L.map(
+                "map_4d9e86be79e0ad0eecc06b1bb9515138",
+                {
+                    center: [43.3, 5.35],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 10,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_16fcb0426523c1b8e6cdee0c6e72673a = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_16fcb0426523c1b8e6cdee0c6e72673a.addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+            var circle_marker_5a2d309225bbf1e91b46b3f858a0b317 = L.circleMarker(
+                [43.2965, 5.3698],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10, "stroke": true, "weight": 3}
+            ).addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+        var popup_615858cf87d3df558cd175b958db1c26 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_95b5dbef176bffd81ab283b61bd02b15 = $(`<div id="html_95b5dbef176bffd81ab283b61bd02b15" style="width: 100.0%; height: 100.0%;"><b>centre_ville</b><br>Catégorie : Urbain<br>Lat: 43.2965<br>Lon: 5.3698</div>`)[0];
+                popup_615858cf87d3df558cd175b958db1c26.setContent(html_95b5dbef176bffd81ab283b61bd02b15);
+            
+        
+
+        circle_marker_5a2d309225bbf1e91b46b3f858a0b317.bindPopup(popup_615858cf87d3df558cd175b958db1c26)
+        ;
+
+        
+    
+    
+            circle_marker_5a2d309225bbf1e91b46b3f858a0b317.bindTooltip(
+                `<div>
+                     centre_ville
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_5d2b8abd3457d7b74785716f938ac983 = L.circleMarker(
+                [43.3317, 5.3706],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10, "stroke": true, "weight": 3}
+            ).addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+        var popup_dffff91e165f477fd5b5dec1178e093f = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_d51975a13599a5b9129b1833eed235ac = $(`<div id="html_d51975a13599a5b9129b1833eed235ac" style="width: 100.0%; height: 100.0%;"><b>nord_urbain</b><br>Catégorie : Urbain<br>Lat: 43.3317<br>Lon: 5.3706</div>`)[0];
+                popup_dffff91e165f477fd5b5dec1178e093f.setContent(html_d51975a13599a5b9129b1833eed235ac);
+            
+        
+
+        circle_marker_5d2b8abd3457d7b74785716f938ac983.bindPopup(popup_dffff91e165f477fd5b5dec1178e093f)
+        ;
+
+        
+    
+    
+            circle_marker_5d2b8abd3457d7b74785716f938ac983.bindTooltip(
+                `<div>
+                     nord_urbain
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_77f12e01741ae29acac43363630d1610 = L.circleMarker(
+                [43.27, 5.38],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10, "stroke": true, "weight": 3}
+            ).addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+        var popup_e565bc0f1cea05b5f41834a25cbbc332 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_26f623fa46dad6652588c8b88c67fa30 = $(`<div id="html_26f623fa46dad6652588c8b88c67fa30" style="width: 100.0%; height: 100.0%;"><b>sud_urbain</b><br>Catégorie : Urbain<br>Lat: 43.27<br>Lon: 5.38</div>`)[0];
+                popup_e565bc0f1cea05b5f41834a25cbbc332.setContent(html_26f623fa46dad6652588c8b88c67fa30);
+            
+        
+
+        circle_marker_77f12e01741ae29acac43363630d1610.bindPopup(popup_e565bc0f1cea05b5f41834a25cbbc332)
+        ;
+
+        
+    
+    
+            circle_marker_77f12e01741ae29acac43363630d1610.bindTooltip(
+                `<div>
+                     sud_urbain
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_863fe4c3f76e23ded0400c0014cfe055 = L.circleMarker(
+                [43.3, 5.55],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10, "stroke": true, "weight": 3}
+            ).addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+        var popup_5ea9d18d484b335c7fa276b3e5b26b7c = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_91306876dc6b01f05ba706adeeb4eeca = $(`<div id="html_91306876dc6b01f05ba706adeeb4eeca" style="width: 100.0%; height: 100.0%;"><b>rural_est</b><br>Catégorie : Rural<br>Lat: 43.3<br>Lon: 5.55</div>`)[0];
+                popup_5ea9d18d484b335c7fa276b3e5b26b7c.setContent(html_91306876dc6b01f05ba706adeeb4eeca);
+            
+        
+
+        circle_marker_863fe4c3f76e23ded0400c0014cfe055.bindPopup(popup_5ea9d18d484b335c7fa276b3e5b26b7c)
+        ;
+
+        
+    
+    
+            circle_marker_863fe4c3f76e23ded0400c0014cfe055.bindTooltip(
+                `<div>
+                     rural_est
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_8b0a1814535c38caa232f71b0f6a93d9 = L.circleMarker(
+                [43.45, 5.3],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10, "stroke": true, "weight": 3}
+            ).addTo(map_4d9e86be79e0ad0eecc06b1bb9515138);
+        
+    
+        var popup_a98ef0944ec08c00df6730a42c543c1a = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_eff7f9a0058ba872a4c2a0c283c9c070 = $(`<div id="html_eff7f9a0058ba872a4c2a0c283c9c070" style="width: 100.0%; height: 100.0%;"><b>rural_nord</b><br>Catégorie : Rural<br>Lat: 43.45<br>Lon: 5.3</div>`)[0];
+                popup_a98ef0944ec08c00df6730a42c543c1a.setContent(html_eff7f9a0058ba872a4c2a0c283c9c070);
+            
+        
+
+        circle_marker_8b0a1814535c38caa232f71b0f6a93d9.bindPopup(popup_a98ef0944ec08c00df6730a42c543c1a)
+        ;
+
+        
+    
+    
+            circle_marker_8b0a1814535c38caa232f71b0f6a93d9.bindTooltip(
+                `<div>
+                     rural_nord
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+</script>
+</html>

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+.npm/
+
+# Expo
+.expo/
+dist/
+build/
+
+# Raster / large data files
+marseille-engine/cache/
+heatmap-marseille/marseille_uhi.tif
+heatmap-marseille/marseille_uhi.png
+heatmap-marseille/marseille_overview.png
+heatmap-marseille/summary_map.html
+heatmap-marseille/quartiers/carte_uhi_marseille.html
+heatmap-marseille/quartiers/carte_ndvi_marseille.html
+heatmap-marseille/map_html/marseille_uhi.tif
+heatmap-marseille/Browser_images/
+
+# uv lock (optional to commit)
+# uv.lock
+
+# Env
+.env
+*.local
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,38 @@
+{
+  "name": "fresh-route",
+  "version": "1.0.0",
+  "description": "",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build:android": "eas build --platform android",
+    "build:apk": "eas build --platform android --profile preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@expo/metro-runtime": "^56.0.14",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@rnmapbox/maps": "^10.3.1",
+    "@types/three": "^0.184.1",
+    "expo": "^56.0.9",
+    "expo-gl": "^56.0.5",
+    "expo-location": "^56.0.16",
+    "expo-maps": "^56.0.6",
+    "expo-router": "^56.2.9",
+    "expo-status-bar": "^56.0.4",
+    "framer-motion": "^12.40.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-native": "^0.85.3",
+    "react-native-maps": "^1.27.2",
+    "react-native-safe-area-context": "^5.8.0",
+    "react-native-web": "^0.21.2",
+    "three": "^0.184.0",
+    "typescript": "~6.0.3"
+  }
+}

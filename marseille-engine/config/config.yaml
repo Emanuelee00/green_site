@@ -1,0 +1,13 @@
+data:
+  quartiers: "../heatmap-marseille/quartiers/quartiers.geojson"
+  raster_uhi: "../heatmap-marseille/marseille_uhi.tif"
+  modis_csv: "../heatmap-marseille/temp-analysis/MODIS_marseille_2000_2024.csv"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+map:
+  center_lat: 43.2965
+  center_lon: 5.3698
+  default_radius_km: 3.3

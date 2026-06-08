@@ -1,0 +1,4 @@
+data:
+  quartiers: "data/quartiers.geojson"
+  raster_uhi: "data/marseille_uhi.tif"
+  output_dir: "outputs/"

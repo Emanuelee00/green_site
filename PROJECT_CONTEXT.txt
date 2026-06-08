@@ -1,0 +1,277 @@
+================================================================================
+PROJECT CONTEXT — Marseille Green Project
+Generated: 2026-06-08
+================================================================================
+
+## OBIETTIVO
+Applicazione per routing "fresco" a Marsiglia: percorsi pedonali/ciclabili che
+minimizzano l'esposizione al calore urbano (UHI) usando dati satellitari Sentinel-2.
+
+================================================================================
+STRUTTURA GENERALE
+================================================================================
+
+/goinfre/eielmini/green_project/
+├── heatmap-marseille/     → SORGENTE DATI (non toccare)
+├── marseille-engine/      → Backend API (FastAPI + Python)
+├── marseille-app/         → Web dashboard (React + Vite + Tailwind + Three.js)
+└── fresh-route/           → App mobile (Expo + React Native)
+
+================================================================================
+1. heatmap-marseille/ — DATI (sorgente, invariata)
+================================================================================
+
+File usati dal motore:
+- marseille_uhi.tif              → raster UHI composito (20MB, Sentinel-2)
+- quartiers/quartiers.geojson    → confini 111 quartieri Marsiglia (2.5MB)
+- temp-analysis/MODIS_marseille_2000_2024.csv → LST storica 2000-2024 (81k righe)
+
+Indice UHI composito: 40% SWIR + 30% NDVI + 10% Urban + 10% NDWI
+
+Zone MODIS (9):
+centre_ville, nord_urbain, sud_urbain, periurbain_est, periurbain_nord,
+rural_est, rural_nord, rural_ouest, rural_sud
+
+CSV columns: system:index, LST_jour_C, LST_nuit_C, amplitude_C, annee, date,
+             jour, mois, source, zone, .geo
+Nodata value: -9999
+
+================================================================================
+2. marseille-engine/ — BACKEND API
+================================================================================
+
+Stack: Python 3.13, FastAPI, uv (package manager)
+Port: 8000
+Docs: http://localhost:8000/docs
+
+--- Gestione dipendenze ---
+Package manager: uv
+Config: pyproject.toml (requires-python = ">=3.13")
+IMPORTANTE: sempre usare UV_PYTHON=/usr/bin/python3 prima di uv run/add
+Motivo: /home è pieno (100%), uv cerca python 3.11 di default
+
+--- Avvio ---
+make run          → solo API
+make start        → API + web dashboard
+make start-mobile → API + app mobile Expo
+
+--- Struttura ---
+marseille-engine/
+├── api/
+│   ├── main.py              → FastAPI app + CORS + lifespan
+│   ├── models.py            → Pydantic schemas
+│   └── routers/
+│       ├── uhi.py           → /uhi/*
+│       ├── history.py       → /history/*
+│       ├── route.py         → /route/
+│       └── risk.py          → /risk/
+├── core/
+│   ├── data_loader.py       → carica tutto in RAM al boot
+│   ├── raster_query.py      → sample UHI per coordinate
+│   ├── graph_builder.py     → OSMnx graph + cache
+│   ├── green_score.py       → pesi archi (OSM type + UHI raster)
+│   └── risk_scorer.py       → score rischio per mese
+├── config/config.yaml       → path dati (override con env vars)
+├── Makefile
+├── Dockerfile
+├── docker-compose.yml
+└── pyproject.toml
+
+--- Endpoint implementati ---
+GET /health
+GET /uhi/quartiers              → GeoJSON 111 quartieri + UHI score
+GET /uhi/quartier/{nome}        → stats singolo quartiere (NOM_QUA)
+GET /uhi/point?lat=&lon=        → score + label cool/warm/hot
+GET /history/zones              → lista 9 zone MODIS
+GET /history/{zona}?from=&to=  → LST giorno/notte + trend °C/decade
+GET /risk/?month=1-12           → GeoJSON quartieri con risk_level
+GET /route/?from_lat=&from_lon=&to_lat=&to_lon= → percorso A★ pesato UHI
+
+--- Routing algorithm ---
+A* (nx.astar_path) con euristica geografica (distanza euclidea in CRS proiettato)
+Edge weight "green_weight":
+  - base: lunghezza in metri
+  - sconto 35% per strade pedonali (footway, path, pedestrian, cycleway)
+  - sconto 30% per zone fresche (UHI < 0.35)
+  - penalità 40% per zone calde (UHI > 0.65)
+
+--- Variabili d'ambiente (override config.yaml) ---
+DATA_QUARTIERS   → path quartiers.geojson
+DATA_RASTER_UHI  → path marseille_uhi.tif
+DATA_MODIS_CSV   → path CSV MODIS
+
+--- Boot sequence ---
+1. Carica marseille_uhi.tif in RAM (np.ndarray)
+2. Carica quartiers.geojson + zonal stats → 111 quartieri con uhi_mean/score/rank
+3. Carica MODIS CSV
+4. Scarica grafo OSM Marsiglia 3.3km (cached su disco) + applica green_weight
+
+--- Problemi noti ---
+- /home è pieno (100%) → npm cache su /goinfre/eielmini/.npm-cache
+- uv non trova python 3.11 → usare UV_PYTHON=/usr/bin/python3
+- scipy necessario per ox.distance.nearest_nodes su grafo proiettato
+
+================================================================================
+3. marseille-app/ — WEB DASHBOARD
+================================================================================
+
+Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4
+Port: 5173
+Proxy: /api/* → http://localhost:8000
+
+Librerie aggiuntive:
+- leaflet (mappe)
+- @react-three/fiber + three (scena 3D)
+- framer-motion (animazioni)
+
+Struttura src/:
+├── api/engine.ts          → fetch verso /api/*
+├── types/index.ts         → QuartierFeature, RouteResponse, ecc.
+├── data/demoRoutes.ts     → 4 percorsi precaricati
+├── screens/
+│   ├── HeroScreen.tsx     → scena 3D Calanque + CTA
+│   ├── RoutesScreen.tsx   → lista card percorsi
+│   └── RouteDetailScreen.tsx → dettaglio + stats + SVG path
+└── components/
+    ├── CalanqueScene.tsx  → Three.js: acqua animata + cliff + stelle
+    └── Map.tsx            → Leaflet map (UHI + route)
+
+App.tsx: state machine con 3 schermate (hero → routes → detail)
+Animazioni: AnimatePresence + motion (framer-motion)
+Mobile viewport: max-width 430px centrato
+
+Nota avvio Vite: node node_modules/vite/bin/vite.js (npx non funziona su 42)
+
+================================================================================
+4. fresh-route/ — APP MOBILE (Expo)
+================================================================================
+
+Stack: Expo 56, React Native 0.85, TypeScript, expo-router
+Preview web: http://localhost:8081
+Build APK: npm run build:apk (via EAS)
+Android package: com.freshroute.marseille
+
+Avvio:
+EXPO_NO_DOTEXPO_FOLDER=1 TMPDIR=/goinfre/eielmini/.expo-cache HOME=/goinfre/eielmini
+node node_modules/expo/bin/cli start --web --port 8081
+
+Librerie chiave:
+- expo-router (navigazione file-based)
+- expo-location (geolocalizzazione)
+- react-native-safe-area-context
+- @react-three/fiber + three (scena 3D Calanque)
+- expo-gl (GL context nativo)
+
+--- Struttura (single responsibility) ---
+app/
+├── _layout.tsx        → solo navigazione (Stack)
+├── index.tsx          → Hero screen (3D + CTA)
+├── routes.tsx         → lista percorsi demo
+├── route-detail.tsx   → dettaglio percorso
+└── heatmap.tsx        → mappa calore per mese
+
+src/
+├── types/index.ts           → HeatLabel, RouteResponse, DemoRoute, ecc.
+├── theme/index.ts           → colors, heat config, radius, spacing
+├── data/demoRoutes.ts       → 4 percorsi precaricati
+├── api/engine.ts            → fetch verso http://localhost:8000
+├── hooks/
+│   ├── useLocation.ts       → expo-location wrapper
+│   └── useRoute.ts          → logica calcolo + fallback offline
+└── components/
+    ├── scene/CalanqueScene.tsx   → Three.js 3D (water + cliff + stars)
+    ├── ui/HeatBadge.tsx          → badge cool/warm/hot
+    ├── ui/FreshScoreBar.tsx      → barra score 0-100%
+    ├── ui/StatCard.tsx           → card singola statistica
+    └── routes/RouteCard.tsx      → card percorso completa
+
+IMPORTANTE per telefono fisico: cambiare BASE in src/api/engine.ts
+da "http://localhost:8000" a "http://<IP_PC>:8000"
+
+--- Demo routes precaricati ---
+1. Vieux-Port → Parc Borély     | cool | 4.2km | score 81%
+2. Réformés → Cinq-Avenues      | warm | 2.1km | score 55%
+3. Noailles → Belsunce          | hot  | 0.8km | score 19%
+4. Castellane → Sainte-Anne     | cool | 1.6km | score 73%
+
+================================================================================
+DESIGN SYSTEM (shared)
+================================================================================
+
+Colori:
+bg:          #0d1f0f  (deep forest)
+card:        #1a3a2a  (green)
+primary:     #22c55e  (verde fresco)
+turquoise:   #00b4d8
+sand:        #e9c46a
+text:        #f1f5f9
+textSub:     #94a3b8
+hot:         #ef4444
+warm:        #f59e0b
+
+Heat labels:
+cool → #22c55e 🌿  (UHI score < 0.35)
+warm → #f59e0b ☀️  (UHI score 0.35–0.65)
+hot  → #ef4444 🔥  (UHI score > 0.65)
+
+================================================================================
+COMANDI RAPIDI
+================================================================================
+
+# Avvio tutto (dal motore)
+cd /goinfre/eielmini/green_project/marseille-engine
+make start           # API (8000) + web dashboard (5173)
+make start-mobile    # API (8000) + Expo web (8081)
+
+# Solo motore
+make run
+
+# Solo web dashboard
+cd ../marseille-app && node node_modules/vite/bin/vite.js
+
+# Solo app mobile
+cd ../fresh-route
+EXPO_NO_DOTEXPO_FOLDER=1 TMPDIR=/goinfre/eielmini/.expo-cache HOME=/goinfre/eielmini \
+node node_modules/expo/bin/cli start --web --port 8081
+
+# Test API
+curl http://localhost:8000/health
+curl http://localhost:8000/uhi/quartier/OPERA
+curl "http://localhost:8000/route/?from_lat=43.2965&from_lon=5.3698&to_lat=43.290&to_lon=5.380"
+curl "http://localhost:8000/history/centre_ville?from=2018&to=2024"
+curl "http://localhost:8000/risk/?month=7"
+
+# npm su 42 (home piena)
+npm_config_cache=/goinfre/eielmini/.npm-cache npm install <pkg>
+
+================================================================================
+VINCOLI MACCHINA (42 school / goinfre)
+================================================================================
+
+- /home/eielmini è PIENO (100%) → tutto su /goinfre/eielmini/
+- Python disponibile: /usr/bin/python3 (3.13.13)
+- Node: v22.22.0, npm: 10.9.4
+- npx non funziona per install globali → usare node node_modules/...
+- npm install globale richiede root → usare npm_config_cache= e npm_config_prefix=
+- uv cache: default su /home → usare UV_PYTHON=/usr/bin/python3
+- Expo cache: default su /home/.expo → usare HOME=/goinfre/eielmini + EXPO_NO_DOTEXPO_FOLDER=1
+
+================================================================================
+PROSSIMI STEP SUGGERITI
+================================================================================
+
+1. Implementare le altre 4 app frontend:
+   - Dashboard climatica per amministratori
+   - Heat risk alert app (con dati MODIS real-time)
+   - Tool valutazione immobiliare
+   - Piattaforma educativa (evoluzione UHI 2000-2024)
+
+2. Aggiungere mappa interattiva nell'app mobile (react-native-maps)
+
+3. Docker: aggiornare config per deploy su VPS/cloud
+
+4. Test: aggiungere pytest per il motore
+
+5. Play Store: configurare EAS build + account Expo per pubblicare APK
+
+================================================================================

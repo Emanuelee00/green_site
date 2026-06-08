@@ -1,0 +1,58 @@
+export interface DemoRoute {
+  id: string;
+  name: string;
+  description: string;
+  from: { lat: number; lon: number; label: string };
+  to:   { lat: number; lon: number; label: string };
+  badge: "cool" | "warm" | "hot";
+  distance: string;
+  freshScore: number;
+  highlights: string[];
+}
+
+export const DEMO_ROUTES: DemoRoute[] = [
+  {
+    id: "1",
+    name: "Vieux-Port → Parc Borély",
+    description: "Scenic coastal route via Corniche — maximum shade and sea breeze",
+    from: { lat: 43.2951, lon: 5.3749, label: "Vieux-Port" },
+    to:   { lat: 43.2607, lon: 5.3738, label: "Parc Borély" },
+    badge: "cool",
+    distance: "4.2 km",
+    freshScore: 0.81,
+    highlights: ["Corniche Kennedy", "Sea breeze", "Tree-lined path"],
+  },
+  {
+    id: "2",
+    name: "Réformés → Cinq-Avenues",
+    description: "Residential route through Longchamp gardens",
+    from: { lat: 43.2997, lon: 5.3812, label: "Réformés" },
+    to:   { lat: 43.3046, lon: 5.3967, label: "Cinq-Avenues" },
+    badge: "warm",
+    distance: "2.1 km",
+    freshScore: 0.55,
+    highlights: ["Palais Longchamp", "Boulevard shading"],
+  },
+  {
+    id: "3",
+    name: "Noailles → Belsunce",
+    description: "City centre crossing — high UHI, minimal shade",
+    from: { lat: 43.2963, lon: 5.3775, label: "Noailles" },
+    to:   { lat: 43.2994, lon: 5.3749, label: "Belsunce" },
+    badge: "hot",
+    distance: "0.8 km",
+    freshScore: 0.19,
+    highlights: ["High heat exposure", "Dense urban area"],
+  },
+  {
+    id: "4",
+    name: "Castellane → Sainte-Anne",
+    description: "Green belt route avoiding the urban heat core",
+    from: { lat: 43.2838, lon: 5.3922, label: "Castellane" },
+    to:   { lat: 43.2775, lon: 5.4011, label: "Sainte-Anne" },
+    badge: "cool",
+    distance: "1.6 km",
+    freshScore: 0.73,
+    highlights: ["Park paths", "Low traffic", "Shaded streets"],
+  },
+];
