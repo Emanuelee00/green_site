@@ -10,6 +10,7 @@ from pathlib import Path
 
 class DataLoader:
     def __init__(self, config_path: str = "config/config.yaml"):
+        self._config_dir = Path(config_path).resolve().parent  # e.g. marseille-engine/config/
         with open(config_path) as f:
             self.config = yaml.safe_load(f)
 

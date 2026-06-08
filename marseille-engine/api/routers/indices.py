@@ -1,29 +1,39 @@
 """
 GET /indices/{name}/raw  →  float32 binary + X-Raster-* headers
-Supported names: ndvi, ndwi, swir, urban
+GET /indices/available   →  {name: bool}
 
-Returns 404 if the TIF file is not found (run scripts/download_s2_indices.py first).
-Same wire format as /uhi/raster/raw so the frontend can reuse the same renderer.
+Supported names: ndvi, ndwi, swir, urban
+Same wire format as /uhi/raster/raw.
 """
 import numpy as np
 from pathlib import Path
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import Response
 
 router = APIRouter()
-
-# Path assoluto relativo a questo file — indipendente dal CWD di uvicorn
-INDICES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "heatmap-marseille" / "indices"
 ALLOWED = {"ndvi", "ndwi", "swir", "urban"}
+
+# Candidate directories searched in order — covers both engine locations
+_CANDIDATES = [
+    Path("/goinfre/eielmini/green_project/heatmap-marseille/indices"),
+    Path("/goinfre/eielmini/heatmap-marseille/indices"),
+]
+
+
+def _indices_dir() -> Path:
+    for p in _CANDIDATES:
+        if p.exists():
+            return p
+    raise RuntimeError(f"Indices directory not found. Searched: {_CANDIDATES}")
 
 
 def _load_index(name: str, scale: float) -> np.ndarray:
     import rasterio
-    path = INDICES_DIR / f"{name}.tif"
+    path = _indices_dir() / f"{name}.tif"
     if not path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"Index '{name}' not found. Run scripts/download_s2_indices.py first.",
+            detail=f"Index '{name}' not found at {path}. Run scripts/download_s2_indices.py first.",
         )
     with rasterio.open(path) as src:
         nodata = src.nodata
@@ -37,14 +47,11 @@ def _load_index(name: str, scale: float) -> np.ndarray:
 @router.get("/indices/{name}/raw")
 def get_index_raw(name: str, scale: float = Query(0.3, ge=0.05, le=1.0)):
     if name not in ALLOWED:
-        raise HTTPException(status_code=400, detail=f"Unknown index '{name}'. Choose from: {sorted(ALLOWED)}")
-
+        raise HTTPException(status_code=400, detail=f"Unknown index. Choose from: {sorted(ALLOWED)}")
     data = _load_index(name, scale)
     rows, cols = data.shape
-    raw = data.tobytes()
-
     return Response(
-        content=raw,
+        content=data.tobytes(),
         media_type="application/octet-stream",
         headers={
             "X-Raster-Rows":  str(rows),
@@ -60,8 +67,8 @@ def get_index_raw(name: str, scale: float = Query(0.3, ge=0.05, le=1.0)):
 
 @router.get("/indices/available")
 def get_available_indices():
-    """Returns which index TIFs are present on disk."""
-    return {
-        name: (INDICES_DIR / f"{name}.tif").exists()
-        for name in sorted(ALLOWED)
-    }
+    try:
+        d = _indices_dir()
+        return {name: (d / f"{name}.tif").exists() for name in sorted(ALLOWED)}
+    except RuntimeError:
+        return {name: False for name in sorted(ALLOWED)}

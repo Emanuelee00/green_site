@@ -2,6 +2,7 @@ data:
   quartiers: "../heatmap-marseille/quartiers/quartiers.geojson"
   raster_uhi: "../heatmap-marseille/marseille_uhi.tif"
   modis_csv: "../heatmap-marseille/temp-analysis/MODIS_marseille_2000_2024.csv"
+  indices_dir: "../heatmap-marseille/indices"
 
 server:
   host: "0.0.0.0"
