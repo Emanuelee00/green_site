@@ -12,7 +12,8 @@ from fastapi.responses import Response
 
 router = APIRouter()
 
-INDICES_DIR = Path("../heatmap-marseille/indices")
+# Path assoluto relativo a questo file — indipendente dal CWD di uvicorn
+INDICES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "heatmap-marseille" / "indices"
 ALLOWED = {"ndvi", "ndwi", "swir", "urban"}
 
 
