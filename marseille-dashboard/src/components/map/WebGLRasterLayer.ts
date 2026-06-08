@@ -1,4 +1,5 @@
 import L from "leaflet";
+import type { AllZonesHistory } from "../../types";
 
 const ZONES = [
   "centre_ville","nord_urbain","sud_urbain",
@@ -6,221 +7,156 @@ const ZONES = [
   "rural_est","rural_nord","rural_ouest","rural_sud",
 ];
 
+export type RasterIndex = "uhi" | "ndvi" | "ndwi" | "swir" | "urban";
 
-const VERT = `
-  attribute vec2 a_pos;  // NDC position of quad corner
-  attribute vec2 a_uv;   // texture UV
-  varying vec2 v_uv;
-  void main() { v_uv = a_uv; gl_Position = vec4(a_pos, 0.0, 1.0); }
-`;
+// ── Colormaps (t ∈ [0,1] → [r, g, b] ∈ [0,255]) ─────────────────────────────
 
-const FRAG = `
-  precision mediump float;
-  uniform sampler2D u_raster;
-  uniform float u_min;
-  uniform float u_max;
-  uniform float u_shift;   // anomaly shift in normalised UHI space
-  varying vec2 v_uv;
+function lerp(a: number, b: number, t: number) { return Math.round(a + (b - a) * t); }
 
-  vec4 heatRgba(float t) {
-    t = clamp(t, 0.0, 1.0);
-    vec3 c;
-    if      (t < 0.25) c = mix(vec3(0.13,0.77,0.37), vec3(0.53,0.94,0.67), t*4.0);
-    else if (t < 0.50) c = mix(vec3(0.53,0.94,0.67), vec3(0.99,0.88,0.28), (t-0.25)*4.0);
-    else if (t < 0.75) c = mix(vec3(0.99,0.88,0.28), vec3(0.98,0.57,0.24), (t-0.50)*4.0);
-    else               c = mix(vec3(0.98,0.57,0.24), vec3(0.73,0.11,0.11), (t-0.75)*4.0);
-    return vec4(c, 0.82);
-  }
+type RGB = [number, number, number];
 
-  void main() {
-    float raw = texture2D(u_raster, v_uv).r;
-    if (raw < -1e30) { discard; }  // NaN / nodata
-    float norm = clamp((raw - u_min) / (u_max - u_min + 1e-5) + u_shift, 0.0, 1.0);
-    gl_FragColor = heatRgba(norm);
-  }
-`;
-
-export interface AllZonesHistory {
-  [zone: string]: { [year: number]: { anomaly_norm: number } };
+function ramp(stops: RGB[], t: number): RGB {
+  t = Math.max(0, Math.min(1, t));
+  const n = stops.length - 1;
+  const i = Math.min(Math.floor(t * n), n - 1);
+  const s = t * n - i;
+  return [lerp(stops[i][0], stops[i+1][0], s), lerp(stops[i][1], stops[i+1][1], s), lerp(stops[i][2], stops[i+1][2], s)];
 }
 
-interface RasterMeta { rows: number; cols: number; min: number; max: number; data: Float32Array }
+const COLORMAPS: Record<RasterIndex, (t: number) => RGB> = {
+  uhi:   (t) => ramp([[33,197,94],[135,240,171],[252,224,71],[250,145,61],[186,28,28]], t),
+  ndvi:  (t) => ramp([[180,80,40],[210,160,80],[240,230,150],[140,200,80],[30,140,50]], t),
+  ndwi:  (t) => ramp([[140,100,50],[200,180,140],[240,240,240],[120,180,220],[30,100,200]], t),
+  swir:  (t) => ramp([[20,50,20],[60,110,60],[140,180,100],[210,200,140],[230,200,160]], t),
+  urban: (t) => ramp([[40,120,60],[160,200,100],[220,200,80],[210,120,50],[180,50,40]], t),
+};
+
+const INDEX_URLS: Record<RasterIndex, string> = {
+  uhi:   "/api/uhi/raster/raw?scale=0.3",
+  ndvi:  "/api/indices/ndvi/raw?scale=0.3",
+  ndwi:  "/api/indices/ndwi/raw?scale=0.3",
+  swir:  "/api/indices/swir/raw?scale=0.3",
+  urban: "/api/indices/urban/raw?scale=0.3",
+};
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface AllZonesHistoryLayer extends AllZonesHistory {}
+
+interface RasterData { rows: number; cols: number; min: number; max: number; f32: Float32Array }
+
+// ── Layer ────────────────────────────────────────────────────────────────────
 
 export class WebGLRasterLayer extends L.Layer {
-  private _canvas!: HTMLCanvasElement;
-  private _gl!: WebGLRenderingContext;
-  private _program!: WebGLProgram;
-  private _texture!: WebGLTexture;
-  private _posBuffer!: WebGLBuffer;
-  private _uvBuffer!: WebGLBuffer;
-  private _meta!: RasterMeta;
+  private _overlay: L.ImageOverlay | null = null;
+  private _cache   = new Map<RasterIndex, RasterData>();
   private _history: AllZonesHistory | null = null;
-  private _year = 2023;
-  private _loaded = false;
+  private _year    = 2023;
+  private _index: RasterIndex = "uhi";
+  private _visible = true;
+  private _loading = false;
 
-  private readonly _geo = {
-    south: 43.19994755263194, west: 5.249940079052022,
-    north: 43.42001637152874, east: 5.5268096923828125,
-  };
-
-  // ── Leaflet lifecycle ───────────────────────────────────────────────────────
+  private readonly _bounds = L.latLngBounds(
+    [43.19994755263194, 5.249940079052022],
+    [43.42001637152874, 5.5268096923828125],
+  );
 
   onAdd(map: L.Map): this {
-    this._canvas = document.createElement("canvas");
-    this._canvas.style.cssText =
-      "position:absolute;top:0;left:0;pointer-events:none;image-rendering:pixelated;";
-    map.getPanes().overlayPane!.appendChild(this._canvas);
-
-    const gl = this._canvas.getContext("webgl", { premultipliedAlpha: false, alpha: true });
-    if (!gl) { console.error("WebGL not supported"); return this; }
-    if (!gl.getExtension("OES_texture_float"))
-      console.warn("OES_texture_float unavailable — raster may look wrong");
-
-    this._gl = gl;
-    this._program = this._buildProgram(gl);
-    this._posBuffer = gl.createBuffer()!;
-    this._uvBuffer  = gl.createBuffer()!;
-
-    // UV is always the same: full [0,1]² quad
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,
-      new Float32Array([0,1, 1,1, 0,0, 1,0]), gl.STATIC_DRAW);
-
-    map.on("move zoom resize viewreset", this._draw, this);
+    if (this._cache.has(this._index)) this._render(map);
     return this;
   }
 
-  onRemove(map: L.Map): this {
-    map.off("move zoom resize viewreset", this._draw, this);
-    this._canvas.remove();
+  onRemove(_map: L.Map): this {
+    this._overlay?.remove();
+    this._overlay = null;
     return this;
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────────
+  setVisible(visible: boolean): void {
+    this._visible = visible;
+    const el = this._overlay?.getElement();
+    if (el) el.style.display = visible ? "" : "none";
+  }
 
   async loadData(): Promise<void> {
-    const [rawRes, histRes] = await Promise.all([
-      fetch("/api/uhi/raster/raw?scale=0.3"),
-      fetch("/api/uhi/raster/all-zones-history"),
-    ]);
-
-    this._meta = {
-      rows: parseInt(rawRes.headers.get("X-Raster-Rows") ?? "0"),
-      cols: parseInt(rawRes.headers.get("X-Raster-Cols") ?? "0"),
-      min:  parseFloat(rawRes.headers.get("X-Raster-Min") ?? "0"),
-      max:  parseFloat(rawRes.headers.get("X-Raster-Max") ?? "1"),
-      data: new Float32Array(await rawRes.arrayBuffer()),
-    };
+    await this._fetchIndex("uhi");
+    // Prefetch history for year-shift
+    const histRes = await fetch("/api/uhi/raster/all-zones-history");
     this._history = await histRes.json();
-    this._uploadTexture();
-    this._loaded = true;
-    this._draw();
+    this._render(this._map as L.Map);
+  }
+
+  async setIndex(index: RasterIndex): Promise<void> {
+    this._index = index;
+    if (!this._cache.has(index)) {
+      await this._fetchIndex(index);
+    }
+    this._render(this._map as L.Map);
   }
 
   setYear(year: number): void {
     this._year = year;
-    if (this._loaded) this._draw();
+    if (this._cache.has(this._index)) this._render(this._map as L.Map);
   }
 
-  // ── Internals ───────────────────────────────────────────────────────────────
+  get isLoading() { return this._loading; }
 
-  private _buildProgram(gl: WebGLRenderingContext): WebGLProgram {
-    const compile = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-        throw new Error(gl.getShaderInfoLog(s) ?? "shader compile error");
-      return s;
-    };
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
-    gl.linkProgram(prog);
-    return prog;
-  }
-
-  private _uploadTexture(): void {
-    const gl = this._gl;
-    const { rows, cols, data } = this._meta;
-    this._texture = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, this._texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, cols, rows, 0,
-      gl.LUMINANCE, gl.FLOAT, data);
-  }
-
-  private _draw(): void {
-    if (!this._loaded || !this._gl) return;
-    const map  = this._map as L.Map;
-    const size = map.getSize();
-    const gl   = this._gl;
-
-    this._canvas.width  = size.x;
-    this._canvas.height = size.y;
-
-    // Align canvas with Leaflet overlay pane
-    const origin = map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._canvas, origin);
-
-    // Compute raster corners in layer-point space → NDC
-    const corners = [
-      L.latLng(this._geo.south, this._geo.west),
-      L.latLng(this._geo.south, this._geo.east),
-      L.latLng(this._geo.north, this._geo.west),
-      L.latLng(this._geo.north, this._geo.east),
-    ].map((ll) => {
-      const cp = map.latLngToContainerPoint(ll);
-      // shift by layer origin, then NDC
-      const lp = { x: cp.x - origin.x, y: cp.y - origin.y };
-      return [
-        (lp.x / size.x) * 2 - 1,
-        1 - (lp.y / size.y) * 2,
-      ] as [number, number];
-    });
-
-    // [SW, SE, NW, NE] → triangle strip
-    const posData = new Float32Array([
-      ...corners[0], ...corners[1], ...corners[2], ...corners[3],
-    ]);
-
-    gl.viewport(0, 0, size.x, size.y);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(this._program);
-
-    // Bind pos buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, posData, gl.DYNAMIC_DRAW);
-    const posLoc = gl.getAttribLocation(this._program, "a_pos");
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    // Bind UV buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer);
-    const uvLoc = gl.getAttribLocation(this._program, "a_uv");
-    gl.enableVertexAttribArray(uvLoc);
-    gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, 0, 0);
-
-    // Raster texture
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texture);
-    gl.uniform1i(gl.getUniformLocation(this._program, "u_raster"), 0);
-    gl.uniform1f(gl.getUniformLocation(this._program, "u_min"),   this._meta.min);
-    gl.uniform1f(gl.getUniformLocation(this._program, "u_max"),   this._meta.max);
-    gl.uniform1f(gl.getUniformLocation(this._program, "u_shift"), this._yearShift());
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  private async _fetchIndex(index: RasterIndex): Promise<void> {
+    this._loading = true;
+    try {
+      const res = await fetch(INDEX_URLS[index]);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raster: RasterData = {
+        rows: parseInt(res.headers.get("X-Raster-Rows") ?? "0"),
+        cols: parseInt(res.headers.get("X-Raster-Cols") ?? "0"),
+        min:  parseFloat(res.headers.get("X-Raster-Min") ?? "0"),
+        max:  parseFloat(res.headers.get("X-Raster-Max") ?? "1"),
+        f32:  new Float32Array(await res.arrayBuffer()),
+      };
+      this._cache.set(index, raster);
+    } finally {
+      this._loading = false;
+    }
   }
 
   private _yearShift(): number {
-    if (!this._history) return 0;
-    const shifts = ZONES.map((z) => this._history![z]?.[this._year]?.anomaly_norm ?? 0);
-    const avg = shifts.reduce((a, b) => a + b, 0) / shifts.length;
-    return avg * 0.15;   // ±15% shift on normalised UHI
+    if (!this._history || this._index !== "uhi") return 0;
+    const shifts = ZONES.map((z) => (this._history![z]?.[this._year]?.anomaly_norm ?? 0));
+    return (shifts.reduce((a, b) => a + b, 0) / shifts.length) * 0.15;
+  }
+
+  private _render(map: L.Map): void {
+    if (!map) return;
+    const raster = this._cache.get(this._index);
+    if (!raster) return;
+
+    const { rows, cols, min, max, f32 } = raster;
+    const range  = max - min || 1;
+    const shift  = this._yearShift();
+    const cmap   = COLORMAPS[this._index];
+
+    const canvas = document.createElement("canvas");
+    canvas.width = cols; canvas.height = rows;
+    const ctx = canvas.getContext("2d")!;
+    const img = ctx.createImageData(cols, rows);
+    const px  = img.data;
+
+    for (let i = 0; i < f32.length; i++) {
+      const v = f32[i];
+      if (isNaN(v)) { px[i*4+3] = 0; continue; }
+      const t = Math.max(0, Math.min(1, (v - min) / range + shift));
+      const [r, g, b] = cmap(t);
+      px[i*4] = r; px[i*4+1] = g; px[i*4+2] = b; px[i*4+3] = 209;
+    }
+
+    ctx.putImageData(img, 0, 0);
+    const url = canvas.toDataURL("image/png");
+
+    this._overlay?.remove();
+    this._overlay = L.imageOverlay(url, this._bounds, { opacity: 1, interactive: false }).addTo(map);
+    if (!this._visible) {
+      const el = this._overlay.getElement();
+      if (el) el.style.display = "none";
+    }
   }
 }

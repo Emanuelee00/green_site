@@ -1,4 +1,4 @@
-import type { QuartierCollection, HistoryResponse } from "../types";
+import type { QuartierCollection, HistoryResponse, AllZonesHistory } from "../types";
 
 const BASE = "/api";
 
@@ -10,3 +10,6 @@ export const fetchRisk = (month: number): Promise<QuartierCollection> =>
 
 export const fetchHistory = (zone: string): Promise<HistoryResponse> =>
   fetch(`${BASE}/history/${zone}?from=2000&to=2024`).then((r) => r.json());
+
+export const fetchAllZonesHistory = (): Promise<AllZonesHistory> =>
+  fetch(`${BASE}/uhi/raster/all-zones-history`).then((r) => r.json());

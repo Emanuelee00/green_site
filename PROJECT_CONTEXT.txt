@@ -15,34 +15,39 @@ STRUTTURA GENERALE
 ├── heatmap-marseille/     → SORGENTE DATI (non toccare)
 ├── marseille-engine/      → Backend API (FastAPI + Python)
 ├── marseille-app/         → Web app 3D hero (React + Vite + Three.js)
-├── marseille-dashboard/   → Admin dashboard (React + Vite + Tailwind + WebGL)
+├── marseille-dashboard/   → Admin dashboard professionale (React + Vite + Tailwind)
 └── fresh-route/           → App mobile (Expo + React Native)
 
 ================================================================================
-1. heatmap-marseille/ — DATI (sorgente, invariata)
+1. heatmap-marseille/ — DATI
 ================================================================================
 
 File usati dal motore:
-- marseille_uhi.tif              → raster UHI composito (20MB, Sentinel-2 Aug 2023)
-- quartiers/quartiers.geojson    → confini 111 quartieri Marsiglia (2.5MB)
-- temp-analysis/MODIS_marseille_2000_2024.csv → LST storica 2000-2024 (81k righe)
+- marseille_uhi.tif              → raster UHI composito (Sentinel-2 Aug 2023)
+- quartiers/quartiers.geojson    → confini 111 quartieri Marsiglia
+- temp-analysis/MODIS_marseille_2000_2024.csv → LST storica 2000-2024
+- indices/ndvi.tif               → NDVI Sentinel-2 (22 Aug 2023, tile 31TFH)
+- indices/ndwi.tif               → NDWI Sentinel-2
+- indices/swir.tif               → SWIR normalizzato (B11)
+- indices/urban.tif              → Proxy impermeabilizzazione (B11/B08)
 
 Indice UHI composito: 40% SWIR + 30% NDVI + 10% Urban + 10% NDWI
-Raster CRS: EPSG:4326 — bounds: W5.25, E5.53, S43.20, N43.42 — shape 2284×2090
+Raster CRS: EPSG:4326 — bounds: W5.25, E5.53, S43.20, N43.42 — shape 2284x2090
 
-Zone MODIS (9):
-centre_ville, nord_urbain, sud_urbain, periurbain_est, periurbain_nord,
-rural_est, rural_nord, rural_ouest, rural_sud
+Indici Sentinel-2 scaricati con scripts/download_s2_indices.py da:
+  AWS COG public — tile S2B_31TFH_20230822_0_L2A
+  Bande: B03(Green) B04(Red) B08(NIR 10m) B11(SWIR 20m ricampionato a 10m)
 
-CSV columns: system:index, LST_jour_C, LST_nuit_C, amplitude_C, annee, date,
-             jour, mois, source, zone — Nodata: -9999
+Zone MODIS (9): centre_ville, nord_urbain, sud_urbain, periurbain_est,
+periurbain_nord, rural_est, rural_nord, rural_ouest, rural_sud
+CSV columns: LST_jour_C, LST_nuit_C, amplitude_C, annee, date, zone — Nodata: -9999
 
 ================================================================================
 2. marseille-engine/ — BACKEND API
 ================================================================================
 
-Stack: Python 3.13, FastAPI, uv — Port: 8000 — Docs: http://localhost:8000/docs
-Package manager: uv — IMPORTANTE: sempre UV_PYTHON=/usr/bin/python3
+Stack: Python 3.13, FastAPI, uv — Port: 8000
+Package manager: uv — SEMPRE: UV_PYTHON=/usr/bin/python3
 
 --- Avvio ---
 make run             → solo API
@@ -50,169 +55,129 @@ make start           → API + marseille-app (5173)
 make start-dashboard → API + marseille-dashboard (5174)
 make start-mobile    → API + fresh-route Expo (8081)
 
---- Struttura routers ---
+--- Routers ---
 api/routers/
 ├── uhi.py       → /uhi/quartiers, /uhi/quartier/{nome}, /uhi/point
 ├── history.py   → /history/zones, /history/{zona}
-├── route.py     → /route/ (A★ green routing)
+├── route.py     → /route/ (A* green routing)
 ├── risk.py      → /risk/?month=
 ├── raster.py    → /uhi/raster.png, /uhi/raster/raw, /uhi/raster/bounds,
 │                   /uhi/raster/all-zones-history
-└── timeline.py  → /timeline/snapshot?year=, /timeline/range
+├── timeline.py  → /timeline/snapshot?year=, /timeline/range
+└── indices.py   → /indices/{name}/raw, /indices/available
+                   (name: ndvi | ndwi | swir | urban)
+                   Stesso wire-format di /uhi/raster/raw (float32 + X-Raster-* headers)
 
---- Endpoint chiave ---
-GET /uhi/quartiers              → GeoJSON 111 quartieri + uhi_score/rank
-GET /uhi/point?lat=&lon=        → UHI score per coordinata
-GET /history/{zona}?from=&to=  → LST + trend °C/decade (MODIS)
-GET /risk/?month=               → GeoJSON quartieri con risk_level
-GET /route/?from_lat=...        → percorso A★ pesato UHI
-GET /uhi/raster.png?scale=0.3  → PNG colorizzato (statico)
-GET /uhi/raster/raw?scale=0.3  → float32 binario + headers X-Raster-* (WebGL)
-GET /uhi/raster/all-zones-history → {zone:{year:{lst,anomaly,anomaly_norm}}}
-GET /timeline/snapshot?year=   → {zone: {lst, anomaly, anomaly_norm}} per 9 zone
+--- Script utilità ---
+scripts/download_s2_indices.py → scarica bande S2 da AWS COG, calcola 4 indici
+  Uso: UV_PYTHON=/usr/bin/python3 uv run python scripts/download_s2_indices.py
+  Gia eseguito — indici in heatmap-marseille/indices/
 
---- Routing algorithm ---
-A★ (nx.astar_path) con euristica geografica euclidea in CRS proiettato
-green_weight: lunghezza base + sconto 35% pedonale + sconto 30% fresco + penalità 40% caldo
+--- Routing ---
+A* (nx.astar_path) con euristica geografica euclidea in CRS proiettato
+green_weight: lunghezza base + sconto 35% pedonale + sconto 30% fresco + penalita 40% caldo
 
---- Boot sequence ---
-1. Carica marseille_uhi.tif in RAM (np.ndarray, NaN=nodata)
-2. Carica quartiers.geojson + zonal_stats → 111 quartieri con uhi_mean/score/rank
+--- Boot ---
+1. Carica marseille_uhi.tif in RAM (NaN=nodata)
+2. Carica quartiers.geojson + zonal_stats -> 111 quartieri con uhi_mean/score/rank
 3. Carica MODIS CSV
-4. Scarica grafo OSM Marsiglia 3.3km (cached su disco) + applica green_weight
+4. Scarica grafo OSM Marsiglia 3.3km (cached) + applica green_weight
 
---- Vincoli macchina (42 school / goinfre) ---
-- /home/eielmini PIENO (100%) → tutto su /goinfre/eielmini/
+--- Vincoli macchina (42 school) ---
+- /home/eielmini PIENO → tutto su /goinfre/eielmini/
 - Python: /usr/bin/python3 (3.13.13) — Node: v22.22.0
 - npm cache: npm_config_cache=/goinfre/eielmini/.npm-cache
-- uv: UV_PYTHON=/usr/bin/python3
-- Expo cache: HOME=/goinfre/eielmini EXPO_NO_DOTEXPO_FOLDER=1 TMPDIR=/goinfre/eielmini/.expo-cache
 - npx non funziona → usare node node_modules/...
 
 ================================================================================
 3. marseille-app/ — WEB APP 3D HERO
 ================================================================================
 
-Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4
-Port: 5173 — Proxy: /api/* → localhost:8000
-
+Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4 — Port: 5173
 Librerie: leaflet, @react-three/fiber, three, framer-motion
 
-Struttura:
-src/
-├── screens/HeroScreen.tsx        → scena 3D Calanque + CTA
-├── screens/RoutesScreen.tsx      → lista card percorsi demo
-├── screens/RouteDetailScreen.tsx → dettaglio + stats + SVG path
-├── components/CalanqueScene.tsx  → Three.js: acqua + cliff + stelle
-├── data/demoRoutes.ts            → 4 percorsi precaricati
-└── api/engine.ts                 → fetch verso /api/*
-
+src/screens/: HeroScreen, RoutesScreen, RouteDetailScreen
+src/components/CalanqueScene.tsx → Three.js acqua + cliff + stelle
 App.tsx: state machine hero → routes → detail con AnimatePresence
-
-Avvio: node node_modules/vite/bin/vite.js (npx non funziona)
+Avvio: node node_modules/vite/bin/vite.js
 
 ================================================================================
-4. marseille-dashboard/ — ADMIN DASHBOARD (WebGL raster)
+4. marseille-dashboard/ — ADMIN DASHBOARD PROFESSIONALE
 ================================================================================
 
 Stack: React 19, Vite 8, TypeScript 6, Tailwind CSS 4, Recharts, Leaflet
 Port: 5174 — Proxy: /api/* → localhost:8000
 
-NESSUN PACCHETTO EXTRA per WebGL — API nativa browser.
+Design system dark professionale — NO glass-morphism, colore solo per dati
+Token (C in Dashboard.tsx): base #060d14, panel #0a1520, raised #0f1f30,
+border #18304a, text #d4e0ec, muted #4a6a88, hot #e05252, warm #d4914a, cool #4daa74
 
-Struttura src/:
-├── api/engine.ts                  → fetchQuartiers, fetchRisk, fetchHistory
-├── types/index.ts                 → tipi condivisi + ZONES
-├── pages/Dashboard.tsx            → pagina principale (unica)
-├── components/
-│   ├── map/
-│   │   ├── UHIMap.tsx             → Leaflet + WebGL layer integrato
-│   │   ├── WebGLRasterLayer.ts    → custom L.Layer con WebGL shader
-│   │   └── TimelineSlider.tsx     → slider 2000→2024 sempre visibile
-│   ├── charts/
-│   │   ├── HistoryChart.tsx       → trend LST con linea regressione + 2003 highlight
-│   │   ├── SeasonalChart.tsx      → barre colorate per mese
-│   │   ├── RankingChart.tsx       → tutti 111 quartieri ordinati per calore
-│   │   └── DistributionPanel.tsx  → istogramma distribuzione + confronto arrond.
-│   └── ui/
-│       ├── StatCard.tsx
-│       └── SectionHeader.tsx
+--- src/ ---
+api/engine.ts          → fetchQuartiers, fetchRisk, fetchHistory, fetchAllZonesHistory
+types/index.ts         → tipi condivisi + ZONES + AllZonesHistory
+pages/Dashboard.tsx    → pagina principale unica
 
---- WebGL raster layer ---
-Architettura: download float32 raw UNA VOLTA al mount (~1.7MB),
-poi setYear(year) → aggiorna u_shift uniform → GPU re-render senza HTTP.
-Shader GLSL: LUMINANCE texture float → heat colormap (verde→rosso) + anomaly shift.
-Anomaly shift: media zone_anomaly_norm × 0.15 → ±15% shift sul colore.
-OES_texture_float extension richiesta (supportata da tutti i browser moderni).
+components/map/
+  UHIMap.tsx           → Leaflet + Canvas2D overlay + layer switching per indice
+  WebGLRasterLayer.ts  → Canvas2D raster (NO WebGL), cache per indice, colormaps
+  TimelineSlider.tsx   → slider 2000-2024 + fonte dati anno + anomalia media citta
 
---- Features dashboard ---
-- KPI: avg UHI, hot/cool districts count, hottest/coolest zone
-- Mappa Leaflet dark con WebGL raster overlay (pixel-level)
-- Toggle: 🛰 Pixel / ⬡ Districts / ⊕ Both
-- Timeline slider 2000→2024 fisso sotto la mappa (sempre visibile)
-- Ranking 111 quartieri con click → highlight + flyTo mappa
-- Quartier detail: score gauge, vs avg, percentile, monthly risk, distribution histogram
-- Trend chart 2000→2024 con linea regressione + highlight 2003
-- Seasonal profile con barre colorate per temperatura
+components/charts/
+  HistoryChart.tsx     → trend LST + regressione + 2003 highlight
+  SeasonalChart.tsx    → profilo stagionale (barre colorate)
+  RankingChart.tsx     → 111 quartieri ordinati
+  DistributionPanel.tsx → istogramma distribuzione + confronto arrondissement
+  AnomalyMatrix.tsx    → griglia 9zone x 25anni (colormap divergente blu-bianco-rosso)
+                          zone senza dati mostrano pattern tratteggiato + badge N/D
+  MultiZoneChart.tsx   → confronto LST fino a 4 zone, pill interattive, recharts
+
+public/
+  marseille_overview.png  → immagine 2x2 indici Sentinel-2 (statica R/ggplot2)
+  marseille_uhi.png       → overview UHI
+
+--- Renderer raster ---
+Canvas2D puro (no WebGL, no OES_texture_float) — universalmente compatibile
+Flow: fetch float32 -> normalizza in JS -> putImageData -> L.imageOverlay
+Cache per indice: primo fetch poi switch istantaneo
+
+--- Layer indici mappa ---
+Toolbar segmentata: UHI | NDVI | NDWI | SWIR | Urban
+Colormaps:
+  UHI:   verde->giallo->arancio->rosso
+  NDVI:  rosso-bruno->giallo->verde
+  NDWI:  marrone->bianco->blu
+  SWIR:  verde scuro->giallo chiaro
+  Urban: verde->arancio->rosso
+Se TIF non disponibile -> overlay "Index not available / run download script"
+Year-shift MODIS applicato solo al layer UHI (altri indici sono statici Aug 2023)
+
+--- Features ---
+Header: wordmark tipografico, Export CSV, Export GeoJSON, dot Live
+KPI 5 card: avg UHI, hot/cool districts, hottest/coolest zone (top-border colorato)
+Mappa: Pixel/Districts/Both + UHI Score/Heat Risk + indice selector + timeline
+Districts: threshold filter slider (0-90%), lista filtrata con stats
+Quartier detail: score gauge, percentile, monthly risk bars, distribution panel
+Analysis Tools:
+  - Zone x Year Anomaly Matrix (hover per LST esatto + anomalia)
+  - Multi-zone LST Comparison (selezione pill, marker 2003, trend/decade in legenda)
+TimelineSlider:
+  - Fonte dati per anno (MODIS baseline / post-baseline / S2+MODIS)
+  - Anomalia media citta (arrow + gradi vs baseline)
+  - Tick colorati anni chiave (2003 heatwave rosso, 2010 grigio, 2015 arancio, 2023 verde)
 
 ================================================================================
 5. fresh-route/ — APP MOBILE (Expo)
 ================================================================================
 
-Stack: Expo 56, React Native 0.85, TypeScript, expo-router
-Preview: http://localhost:8081 — Android: com.freshroute.marseille
+Stack: Expo 56, React Native 0.85, TypeScript, expo-router — Port: 8081
 
 Avvio:
 EXPO_NO_DOTEXPO_FOLDER=1 TMPDIR=/goinfre/eielmini/.expo-cache HOME=/goinfre/eielmini
 node node_modules/expo/bin/cli start --web --port 8081
 
-Struttura (single responsibility):
-app/
-├── _layout.tsx        → navigazione Stack
-├── index.tsx          → Hero screen: scena 3D Calanque interattiva
-├── routes.tsx         → lista percorsi demo
-├── route-detail.tsx   → dettaglio percorso con stats
-└── heatmap.tsx        → lista quartieri per rischio mensile
-
-src/
-├── types/index.ts                      → HeatLabel, RouteResponse, DemoRoute...
-├── theme/index.ts                      → colori, heat config, radius, spacing
-├── data/
-│   ├── demoRoutes.ts                   → 4 percorsi demo
-│   └── calanques.ts                    → 6 calanques reali con coords + toScene()
-├── api/engine.ts                       → fetch → marseille-engine
-├── hooks/useLocation.ts / useRoute.ts
-└── components/scene/
-    ├── CalanqueScene.tsx               → Canvas + OrbitControls + markers
-    ├── Terrain.tsx                     → acqua animata + cliff
-    ├── CalanqueMarkers.tsx             → sphere markers + route arc 3D
-    ├── SceneLighting.tsx               → luce mediterranea
-    └── StarField.tsx                   → stelle procedurali
-
---- Calanques interattive ---
-6 calanques reali: Sormiou, Morgiou, Sugiton, En-Vau, Port-Pin, Port-Miou
-Click marker → info panel con nome, difficoltà (verde/arancio/rosso), highlights
-"Calculate route" → chiama engine A★ → route-detail screen
-Arco 3D verde da Vieux-Port alla calanque selezionata
-OrbitControls: ruota, zoom, pan disabilitato
-
-================================================================================
-DESIGN SYSTEM (shared)
-================================================================================
-
-Colori:
-bg:        #0d1f0f / #080c10 (deep dark)
-card:      #1a3a2a / #111827
-primary:   #22c55e (verde fresco)
-turquoise: #00b4d8
-sand:      #e9c46a
-text:      #f1f5f9
-hot:       #ef4444  warm: #f59e0b  cool: #22c55e
-
-Heat labels:
-cool → #22c55e 🌿 (UHI < 35%)
-warm → #f59e0b ☀️ (UHI 35-65%)
-hot  → #ef4444 🔥 (UHI > 65%)
+app/: _layout, index (hero 3D), routes, route-detail, heatmap
+src/components/scene/: CalanqueScene, Terrain, CalanqueMarkers, SceneLighting, StarField
+6 calanques reali interattive con route arc 3D, OrbitControls
 
 ================================================================================
 COMANDI RAPIDI
@@ -220,16 +185,18 @@ COMANDI RAPIDI
 
 cd /goinfre/eielmini/green_project/marseille-engine
 
-make start           # API + marseille-app  → :8000 + :5173
-make start-dashboard # API + dashboard      → :8000 + :5174
-make start-mobile    # API + Expo web       → :8000 + :8081
-make run             # solo API             → :8000
+make start           # API + marseille-app  -> :8000 + :5173
+make start-dashboard # API + dashboard      -> :8000 + :5174
+make start-mobile    # API + Expo web       -> :8000 + :8081
+make run             # solo API             -> :8000
+
+# Indici Sentinel-2 (gia scaricati in heatmap-marseille/indices/)
+UV_PYTHON=/usr/bin/python3 uv run python scripts/download_s2_indices.py
 
 # Test API
 curl http://localhost:8000/health
-curl "http://localhost:8000/uhi/raster/raw?scale=0.3" -I    # headers float32
-curl "http://localhost:8000/uhi/raster/all-zones-history"   # anomalie 2000-2024
-curl "http://localhost:8000/timeline/snapshot?year=2003"    # heatwave year
+curl "http://localhost:8000/indices/available"
+curl "http://localhost:8000/uhi/raster/raw?scale=0.3" -I
 
 # npm su 42
 npm_config_cache=/goinfre/eielmini/.npm-cache npm install <pkg>
@@ -240,16 +207,14 @@ GIT
 
 Remote: git@github.com:Emanuelee00/green_site.git
 Branch: emanuele
-Ultimo push: 2026-06-08
 
 ================================================================================
 PROSSIMI STEP SUGGERITI
 ================================================================================
 
-1. Per-pixel zone coloring nel WebGL shader (attualmente usa media città)
-   → Passare zona mask come texture RGBA (1 byte/pixel) e lookup anomalia per zona
-2. App mobile: aggiungere react-native-maps per vedere il percorso sulla mappa
+1. Scatter plot NDVI vs UHI per quartiere (correlazione vegetazione-calore)
+2. App mobile: react-native-maps per visualizzare il percorso sulla mappa
 3. Le altre 3 app: heat risk alerts, valutazione immobiliare, piattaforma educativa
-4. Docker: testare build e deploy su VPS
-5. Play Store: configurare EAS build + account Expo
+4. Docker: build e deploy su VPS
+5. Play Store: EAS build + account Expo
 ================================================================================

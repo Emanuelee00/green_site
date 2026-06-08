@@ -33,6 +33,10 @@ export interface HistoryResponse {
 
 export type Season = "annual" | "summer" | "winter";
 
+export interface AllZonesHistory {
+  [zone: string]: { [year: number]: { lst: number | null; anomaly: number; anomaly_norm: number } };
+}
+
 export const ZONES = [
   "centre_ville","nord_urbain","sud_urbain",
   "periurbain_est","periurbain_nord",
