@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Fresh Route",
+    "slug": "fresh-route",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#22c55e"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#22c55e"
+      },
+      "package": "com.freshroute.marseille",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.freshroute.marseille",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used to show your position on the map and calculate your route."
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location"
+    ],
+    "scheme": "freshroute",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

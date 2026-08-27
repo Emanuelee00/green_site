@@ -1,0 +1,13 @@
+services:
+  engine:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../heatmap-marseille:/data:ro
+      - ./cache:/app/cache
+    environment:
+      DATA_QUARTIERS: /data/quartiers/quartiers.geojson
+      DATA_RASTER_UHI: /data/marseille_uhi.tif
+      DATA_MODIS_CSV: /data/temp-analysis/MODIS_marseille_2000_2024.csv
+    restart: unless-stopped

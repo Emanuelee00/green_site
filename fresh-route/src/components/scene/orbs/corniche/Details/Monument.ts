@@ -1,0 +1,1 @@
+import{addPoint,type Cloud}from"../shared";export function addMonument(c:Cloud){for(let i=0;i<12;i++)addPoint(c,1.86,1.12+i*.09,-2.3,[.25,.22,.18]);for(let i=0;i<12;i++)addPoint(c,1.65+i*.035,2.18,-2.3,[.7,.66,.55]);}

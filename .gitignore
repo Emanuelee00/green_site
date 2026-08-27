@@ -1,0 +1,12 @@
+node_modules/
+.venv/
+dist/
+build/
+.expo/
+__pycache__/
+*.egg-info/
+.env.local
+.env
+Makefile.local
+cache/
+.DS_Store

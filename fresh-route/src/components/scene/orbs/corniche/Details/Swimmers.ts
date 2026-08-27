@@ -1,0 +1,1 @@
+import{addPoint,type Cloud}from"../shared";export function addSwimmers(c:Cloud){for(let s=0;s<5;s++)for(let i=0;i<8;i++){const a=i/8*Math.PI*2;addPoint(c,-2.3+s*.42+Math.cos(a)*.04,.08,-1.7+s*.66+Math.sin(a)*.04,[.9,.56,.38]);}}
