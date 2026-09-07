@@ -1,10 +1,10 @@
-name: Deploy marseille-app to Pages
+name: Deploy marseille-3d to Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'marseille-app/**'
+      - 'marseille-3d/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -22,21 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: marseille-app
+        working-directory: marseille-3d
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: marseille-app/package-lock.json
+          cache-dependency-path: marseille-3d/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx vite build --base=/green_site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: marseille-app/dist
+          path: marseille-3d/dist
 
   deploy:
     needs: build

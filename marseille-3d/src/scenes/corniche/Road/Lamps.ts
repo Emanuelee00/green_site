@@ -1,0 +1,2 @@
+import { addPoint, type Cloud } from "../shared"; import { roadCurve } from "./Asphalt";
+export function addLamps(cloud:Cloud){for(let lamp=0;lamp<8;lamp++){const z=-2.7+lamp*0.78,x=Math.min(roadCurve(z)+0.82,2.85);for(let y=0;y<10;y++)addPoint(cloud,x,0.92+y*0.07,z,[0.42,0.4,0.36]);const headY=1.6;for(let a=0;a<6;a++){const ang=a/6*Math.PI*2;addPoint(cloud,x+Math.cos(ang)*0.025,headY+Math.sin(ang)*0.025,z,[1,0.8,0.35]);}}}
