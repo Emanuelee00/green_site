@@ -1,10 +1,10 @@
-name: Deploy marseille-3d to Pages
+name: Deploy Fresh Route (web) to Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'marseille-3d/**'
+      - 'fresh-route/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -22,21 +22,22 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: marseille-3d
+        working-directory: fresh-route
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: marseille-3d/package-lock.json
+          cache-dependency-path: fresh-route/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npx vite build --base=/green_site/
+      - run: npx expo export -p web
+      - run: cp dist/+not-found.html dist/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: marseille-3d/dist
+          path: fresh-route/dist
 
   deploy:
     needs: build

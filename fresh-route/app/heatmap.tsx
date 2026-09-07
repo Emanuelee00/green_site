@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { fetchRisk } from "@/api/engine";
+import { exampleRisk } from "@/data/exampleData";
 import { colors } from "@/theme";
 import type { RiskFeature } from "@/types";
 
@@ -24,18 +24,17 @@ export default function HeatmapScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const ctrl = new AbortController();
     setLoading(true);
-    fetchRisk(month, ctrl.signal)
-      .then((d) => {
-        const sorted = [...d.features].sort(
+    const id = setTimeout(() => {
+      const d = exampleRisk(month);
+      setFeatures(
+        [...d.features].sort(
           (a, b) => b.properties.uhi_score - a.properties.uhi_score
-        );
-        setFeatures(sorted);
-      })
-      .catch((e) => { if (e?.name !== "AbortError") console.error(e); })
-      .finally(() => setLoading(false));
-    return () => ctrl.abort();
+        )
+      );
+      setLoading(false);
+    }, 250);
+    return () => clearTimeout(id);
   }, [month]);
 
   return (

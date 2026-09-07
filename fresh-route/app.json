@@ -31,8 +31,13 @@
       "expo-location"
     ],
     "scheme": "freshroute",
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/green_site"
     }
   }
 }

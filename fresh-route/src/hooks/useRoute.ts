@@ -1,6 +1,25 @@
 import { useState } from "react";
-import { fetchRoute } from "../api/engine";
 import type { RouteResponse, DemoRoute } from "../types";
+import { exampleRoute } from "../data/exampleData";
+
+// This build runs without marseille-engine: routes are pre-baked examples
+// (see src/data/exampleData.ts) instead of engine-computed paths. A short
+// delay keeps the "calcul en cours" UI feeling intact.
+const FAKE_LATENCY_MS = 450;
+
+function findDemo(fromLat: number, fromLon: number, toLat: number, toLon: number): DemoRoute {
+  return {
+    id: `${fromLat},${fromLon}-${toLat},${toLon}`,
+    name: "Parcours",
+    description: "",
+    from: { lat: fromLat, lon: fromLon, label: "Départ" },
+    to: { lat: toLat, lon: toLon, label: "Arrivée" },
+    badge: "warm",
+    distance: "1.0 km",
+    freshScore: 0.5,
+    highlights: [],
+  };
+}
 
 export function useRoute() {
   const [loading, setLoading] = useState(false);
@@ -12,34 +31,17 @@ export function useRoute() {
   ): Promise<RouteResponse | null> => {
     setLoading(true);
     setError(null);
-    try {
-      return await fetchRoute(fromLat, fromLon, toLat, toLon);
-    } catch {
-      setError("Engine unreachable. Make sure marseille-engine is running.");
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    await new Promise((r) => setTimeout(r, FAKE_LATENCY_MS));
+    setLoading(false);
+    return exampleRoute(findDemo(fromLat, fromLon, toLat, toLon));
   };
 
   const calculateFromDemo = async (demo: DemoRoute): Promise<RouteResponse> => {
     setLoading(true);
     setError(null);
-    try {
-      return await fetchRoute(demo.from.lat, demo.from.lon, demo.to.lat, demo.to.lon);
-    } catch {
-      // Offline fallback — use demo data directly
-      return {
-        geometry: { type: "LineString", coordinates: [] },
-        distance_m: parseFloat(demo.distance) * 1000,
-        uhi_avg: 1 - demo.freshScore,
-        fresh_score: demo.freshScore,
-        label: demo.badge,
-        took_s: 0,
-      };
-    } finally {
-      setLoading(false);
-    }
+    await new Promise((r) => setTimeout(r, FAKE_LATENCY_MS));
+    setLoading(false);
+    return exampleRoute(demo);
   };
 
   return { loading, error, calculate, calculateFromDemo };
