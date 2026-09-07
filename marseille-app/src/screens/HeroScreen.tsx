@@ -42,8 +42,8 @@ export default function HeroScreen({ onExplore }: Props) {
           transition={{ delay: 0.5 }}
           className="flex items-center gap-1.5"
         >
-          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#22c55e" }} />
-          <span style={{ color: "#94a3b8", fontSize: 12 }}>Live data</span>
+          <div className="w-2 h-2 rounded-full" style={{ background: "#f59e0b" }} />
+          <span style={{ color: "#94a3b8", fontSize: 12 }}>Demo mode</span>
         </motion.div>
       </div>
 

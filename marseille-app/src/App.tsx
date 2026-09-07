@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import HeroScreen from "./screens/HeroScreen";
 import RoutesScreen from "./screens/RoutesScreen";
 import RouteDetailScreen from "./screens/RouteDetailScreen";
+import DemoBanner from "./components/DemoBanner";
 import type { RouteResponse } from "./types";
 
 type Screen = "hero" | "routes" | "detail";
@@ -20,6 +21,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <DemoBanner />
       <AnimatePresence mode="wait">
         {screen === "hero" && (
           <motion.div
