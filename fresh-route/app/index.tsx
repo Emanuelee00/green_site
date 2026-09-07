@@ -68,8 +68,8 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.shell} {...panResponder.panHandlers}>
-        <View style={styles.scene} pointerEvents="none"><Canvas key={isFocused ? "focused" : "blurred"} camera={{ position:[0,0,7], fov:48 }} gl={{ antialias:true }}><Suspense fallback={null}><RouteCarouselScene routes={DEMO_ROUTES} currentIndex={currentIndex} panOffsetRef={panOffsetRef} onTap={() => setShowRoutes(true)} /></Suspense></Canvas></View>
-        <TouchableOpacity style={styles.orbTarget} activeOpacity={1} onPress={() => setShowRoutes(true)} accessibilityLabel={`Voir les parcours pour ${current.name}`} />
+        <View style={styles.scene} pointerEvents="none"><Canvas key={isFocused ? "focused" : "blurred"} camera={{ position:[0,0,7], fov:48 }} gl={{ antialias:true }}><Suspense fallback={null}><RouteCarouselScene routes={DEMO_ROUTES} currentIndex={currentIndex} panOffsetRef={panOffsetRef} onTap={() => setShowRoutes((v) => !v)} /></Suspense></Canvas></View>
+        <TouchableOpacity style={styles.orbTarget} activeOpacity={1} onPress={() => setShowRoutes((v) => !v)} accessibilityLabel={`Voir les parcours pour ${current.name}`} />
         <SafeAreaView style={styles.safe} pointerEvents="box-none">
           <View style={styles.topBar}><View><Text style={styles.brand}>FRESH ROUTE</Text><Text style={styles.city}>MARSEILLE</Text></View><View style={styles.topBarActions}><TouchableOpacity style={styles.heatBtn} onPress={() => router.push("/heatmap")}><Text style={styles.heatBtnText}>◉  Carte thermique</Text></TouchableOpacity><TouchableOpacity style={styles.heatBtn} onPress={() => Linking.openURL("https://github.com/Emanuelee00/green_site")}><Text style={styles.heatBtnText}>{'</>'}  Code</Text></TouchableOpacity></View></View>
           <View style={styles.demoNote}><Text style={styles.demoNoteText}>Démo — le moteur de calcul (routing thermique) est hors ligne pour un hébergement gratuit. Les parcours ci-dessous sont des exemples.</Text></View>
