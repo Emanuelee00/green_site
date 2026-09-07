@@ -31,7 +31,7 @@ jobs:
           cache: npm
           cache-dependency-path: marseille-app/package-lock.json
       - run: npm ci
-      - run: npx tsc
+      - run: npx tsc --noEmit
       - run: npx vite build --base=/green_site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
